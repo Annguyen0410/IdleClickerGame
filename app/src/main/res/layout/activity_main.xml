@@ -81,6 +81,40 @@
                 android:textColor="@color/star_color"
                 android:textSize="14sp"
                 android:textStyle="italic" />
+            
+            <!-- NEW: Combo Multiplier -->
+            <TextView
+                android:id="@+id/tvComboMultiplier"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Combo x1"
+                android:textColor="@color/accent_gold"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:layout_marginTop="4dp" />
+            
+            <!-- NEW: Event Status -->
+            <TextView
+                android:id="@+id/tvEventStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EVENT: Double Stardust (60s)"
+                android:textColor="@color/accent_cyan"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:layout_marginTop="4dp" />
+            
+            <!-- NEW: Constellation Points -->
+            <TextView
+                android:id="@+id/tvConstellationPoints"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Constellation Points: 0"
+                android:textColor="@color/text_color_secondary"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
@@ -188,6 +222,69 @@
             android:orientation="vertical" />
     </ScrollView>
 
+    <!-- NEW: Additional Action Row -->
+    <LinearLayout
+        android:id="@+id/additionalActionContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center"
+        app:layout_constraintBottom_toTopOf="@id/bottomActionContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+        
+        <Button
+            android:id="@+id/btnConstellations"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/star_color"
+            android:text="✨"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:layout_marginEnd="4dp"/>
+            
+        <Button
+            android:id="@+id/btnChallenges"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/accent_gold"
+            android:text="🏆"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:layout_marginEnd="4dp"/>
+            
+        <Button
+            android:id="@+id/btnStatistics"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/text_color_secondary"
+            android:text="📊"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:layout_marginEnd="4dp"/>
+            
+        <Button
+            android:id="@+id/btnAutoClicker"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/accent_cyan"
+            android:text="⚡"
+            android:textColor="@color/white"
+            android:textSize="20sp"/>
+    </LinearLayout>
 
     <!-- Bottom Action Row (Unchanged) -->
     <LinearLayout
@@ -254,6 +351,5 @@
             android:visibility="gone"
             android:layout_marginStart="8dp"/>
     </LinearLayout>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

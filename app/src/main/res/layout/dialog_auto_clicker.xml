@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+    
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Auto-Clicker"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_color_primary"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+    
+    <TextView
+        android:id="@+id/tvAutoClickerLevel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Level: 1"
+        android:textSize="18sp"
+        android:textColor="@color/accent_cyan"
+        android:gravity="center"
+        android:layout_marginBottom="8dp"/>
+    
+    <TextView
+        android:id="@+id/tvAutoClickerRate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Rate: 1 stardust per 100ms"
+        android:textSize="16sp"
+        android:textColor="@color/text_color_secondary"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+    
+    <Button
+        android:id="@+id/btnUpgradeAutoClicker"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Upgrade (50 Singularities)"
+        android:textSize="16sp"
+        android:background="@drawable/modern_button_background"
+        android:backgroundTint="@color/accent_cyan"
+        android:textColor="@color/white"/>
+    
+</LinearLayout>
