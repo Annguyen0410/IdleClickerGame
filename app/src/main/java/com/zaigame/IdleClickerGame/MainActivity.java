@@ -49,8 +49,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvStardustCount, tvSps, tvSingularityCount;
     private TextView tvSupernovaProgress, tvBigCrunchProgress;
     private FloatingActionButton btnClickStar, btnSettings, btnAchievements;
-    private Button btnSupernova, btnShootingStar, btnSkillTree, btnBigCrunch; // MODIFIED: Added btnBigCrunch
-    private Button btnBuy1, btnBuy10, btnBuy25; // NEW: Buy amount buttons
+    private Button btnSupernova, btnShootingStar, btnSkillTree, btnBigCrunch, btnEssenceShop;
+    private Button btnBuy1, btnBuy10, btnBuy25;
     private LinearLayout llUpgradesContainer;
     private ConstraintLayout rootLayout;
     private TabLayout tabLayout;
@@ -83,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
     private final List<ResearchUpgrade> researchUpgrades = new ArrayList<>();
     private final List<Achievement> achievements = new ArrayList<>();
     private final List<Skill> skills = new ArrayList<>();
+    private final List<EssencePerk> essencePerks = new ArrayList<>();
 
     // --- Handlers ---
     private final Handler gameLoopHandler = new Handler();
@@ -109,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "CosmicClickerPrefs";
     private static final String KEY_STARDUST = "stardustCount";
     private static final String KEY_SINGULARITY = "singularityCount";
-    private static final String KEY_COSMIC_ESSENCE = "cosmicEssence"; // NEW
+    private static final String KEY_COSMIC_ESSENCE = "cosmicEssence";
     private static final String KEY_UPGRADE_COUNT_PREFIX = "upgrade_count_";
     private static final String KEY_RESEARCH_PREFIX = "research_";
     private static final String KEY_ACHIEVEMENT_PREFIX = "achievement_";
@@ -118,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_LAST_DAILY_REWARD = "lastDailyReward";
     private static final String KEY_TOTAL_CLICKS = "totalClicks";
     private static final String KEY_TOTAL_STARDUST_EARNED = "totalStardustEarned";
+    private static final String KEY_PERK_PREFIX = "perk_";
     private static final long DAILY_REWARD_AMOUNT = 1000000000;
 
     // NEW: Progress bars for major prestige goals
@@ -134,6 +136,7 @@ public class MainActivity extends AppCompatActivity {
         setupResearchUpgrades();
         setupAchievements();
         setupSkills();
+        setupEssencePerks();
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         loadGame();
@@ -203,7 +206,8 @@ public class MainActivity extends AppCompatActivity {
         btnSkillTree = findViewById(R.id.btnSkillTree);
         btnSupernova = findViewById(R.id.btnSupernova);
         btnShootingStar = findViewById(R.id.btnShootingStar);
-        btnBigCrunch = findViewById(R.id.btnBigCrunch); // NEW
+        btnBigCrunch = findViewById(R.id.btnBigCrunch);
+        btnEssenceShop = findViewById(R.id.btnEssenceShop);
         llUpgradesContainer = findViewById(R.id.llUpgradesContainer);
         tabLayout = findViewById(R.id.tabLayout);
 
@@ -219,7 +223,8 @@ public class MainActivity extends AppCompatActivity {
         btnSettings.setOnClickListener(v -> showSettingsDialog());
         btnAchievements.setOnClickListener(v -> showAchievementsDialog());
         btnSkillTree.setOnClickListener(v -> showSkillTreeDialog());
-        btnBigCrunch.setOnClickListener(v -> triggerBigCrunch()); // NEW
+        btnBigCrunch.setOnClickListener(v -> triggerBigCrunch());
+        btnEssenceShop.setOnClickListener(v -> showEssenceShopDialog());
 
         // --- NEW: Listeners for buy amount toggles ---
         btnBuy1.setOnClickListener(v -> setBuyAmount(1));
@@ -302,6 +307,12 @@ public class MainActivity extends AppCompatActivity {
         skills.add(new Skill("sing_1", "Supernova Insight", "+2% Singularities earned per level.", SkillType.SINGULARITY_BOOST, 10, 3, null));
         skills.add(new Skill("sing_2", "Singularity Attunement", "Singularity SPS bonus is +1% stronger per level.", SkillType.SINGULARITY_BOOST, 5, 50, "sing_1"));
     }
+    private void setupEssencePerks() {
+        essencePerks.clear();
+        essencePerks.add(new EssencePerk("perk_sps_boost", "Interstellar Booster", "+50% total SPS permanently.", 1));
+        essencePerks.add(new EssencePerk("perk_cost_reduction", "Quantum Construct", "All Celestial Objects 15% cheaper.", 2));
+        essencePerks.add(new EssencePerk("perk_click_bonus", "Eternal Clicker", "+10 Stardust per click.", 1));
+    }
 
     // --- Core Game Logic ---
     private void onStarClicked() {
@@ -310,6 +321,9 @@ public class MainActivity extends AppCompatActivity {
         clickValue = clickValue.add(BigInteger.valueOf(getSkillLevel("click_1")));
         if (getResearch("research_click_sps").isPurchased()) {
             clickValue = clickValue.add(BigInteger.valueOf(totalSps / 100));
+        }
+        if (getPerk("perk_click_bonus").isPurchased()) {
+            clickValue = clickValue.add(BigInteger.TEN);
         }
         showStardustPopup(clickValue, btnClickStar);
         stardustCount = stardustCount.add(clickValue);
@@ -390,6 +404,11 @@ public class MainActivity extends AppCompatActivity {
             totalSpsDecimal = totalSpsDecimal.multiply(essenceMultiplier);
         }
 
+        // Apply Interstellar Booster perk (x1.5 SPS)
+        if (getPerk("perk_sps_boost").isPurchased()) {
+            totalSpsDecimal = totalSpsDecimal.multiply(new BigDecimal("1.5"));
+        }
+
         // Apply singularity bonus using the new helper method
         BigDecimal singularityMultiplier = BigDecimal.ONE.add(BigDecimal.valueOf(singularityCount * getSingularityBonus()));
         totalSpsDecimal = totalSpsDecimal.multiply(singularityMultiplier);
@@ -460,12 +479,15 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(KEY_STARDUST, stardustCount.toString());
         editor.putInt(KEY_SINGULARITY, singularityCount);
-        editor.putInt(KEY_COSMIC_ESSENCE, cosmicEssence); // NEW
+        editor.putInt(KEY_COSMIC_ESSENCE, cosmicEssence);
         for (int i = 0; i < upgrades.size(); i++) editor.putInt(KEY_UPGRADE_COUNT_PREFIX + i, upgrades.get(i).count);
         for (ResearchUpgrade research : researchUpgrades) editor.putBoolean(KEY_RESEARCH_PREFIX + research.getId(), research.isPurchased());
         for (Achievement achievement : achievements) editor.putBoolean(KEY_ACHIEVEMENT_PREFIX + achievement.getId(), achievement.isUnlocked());
         for (Skill skill : skills) {
             editor.putInt(KEY_SKILL_LEVEL_PREFIX + skill.getId(), skill.getCurrentLevel());
+        }
+        for (EssencePerk perk : essencePerks) {
+            editor.putBoolean(KEY_PERK_PREFIX + perk.getId(), perk.isPurchased());
         }
         editor.putLong(KEY_TOTAL_CLICKS, totalClicks);
         editor.putString(KEY_TOTAL_STARDUST_EARNED, totalStardustEverEarned.toString());
@@ -476,12 +498,15 @@ public class MainActivity extends AppCompatActivity {
     private void loadGame() {
         stardustCount = new BigInteger(prefs.getString(KEY_STARDUST, "0"));
         singularityCount = prefs.getInt(KEY_SINGULARITY, 0);
-        cosmicEssence = prefs.getInt(KEY_COSMIC_ESSENCE, 0); // NEW
+        cosmicEssence = prefs.getInt(KEY_COSMIC_ESSENCE, 0);
         for (int i = 0; i < upgrades.size(); i++) upgrades.get(i).count = prefs.getInt(KEY_UPGRADE_COUNT_PREFIX + i, 0);
         for (ResearchUpgrade research : researchUpgrades) research.setPurchased(prefs.getBoolean(KEY_RESEARCH_PREFIX + research.getId(), false));
         for (Achievement achievement : achievements) achievement.setUnlocked(prefs.getBoolean(KEY_ACHIEVEMENT_PREFIX + achievement.getId(), false));
         for (Skill skill : skills) {
             skill.setCurrentLevel(prefs.getInt(KEY_SKILL_LEVEL_PREFIX + skill.getId(), 0));
+        }
+        for (EssencePerk perk : essencePerks) {
+            perk.setPurchased(prefs.getBoolean(KEY_PERK_PREFIX + perk.getId(), false));
         }
         totalClicks = prefs.getLong(KEY_TOTAL_CLICKS, 0);
         totalStardustEverEarned = new BigInteger(prefs.getString(KEY_TOTAL_STARDUST_EARNED, "0"));
@@ -1010,7 +1035,12 @@ public class MainActivity extends AppCompatActivity {
         if (costReductionLevel > 0) {
             BigDecimal reductionPercent = BigDecimal.valueOf(costReductionLevel * 0.01);
             BigDecimal multiplier = BigDecimal.ONE.subtract(reductionPercent);
-            return new BigDecimal(originalCost).multiply(multiplier).toBigInteger();
+            originalCost = new BigDecimal(originalCost).multiply(multiplier).toBigInteger();
+        }
+        // Apply Quantum Construct perk
+        if (getPerk("perk_cost_reduction").isPurchased()) {
+            BigDecimal multiplier = BigDecimal.valueOf(0.85); // 15% cheaper
+            originalCost = new BigDecimal(originalCost).multiply(multiplier).toBigInteger();
         }
         return originalCost;
     }
@@ -1117,5 +1147,48 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         autoSaveHandler.postDelayed(autoSaveRunnable, 10000);
+    }
+    private EssencePerk getPerk(String id) {
+        for (EssencePerk p : essencePerks) if (p.getId().equals(id)) return p;
+        return new EssencePerk("","", "", 0);
+    }
+    private void showEssenceShopDialog() {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_essence_shop, null);
+        LinearLayout container = dialogView.findViewById(R.id.llPerkContainer);
+        TextView tvEssence = dialogView.findViewById(R.id.tvCurrentEssence);
+        tvEssence.setText(String.format(Locale.getDefault(), "%d Cosmic Essence", cosmicEssence));
+        container.removeAllViews();
+
+        for (EssencePerk perk : essencePerks) {
+            View item = getLayoutInflater().inflate(R.layout.essence_perk_item, container, false);
+            TextView name = item.findViewById(R.id.tvPerkName);
+            TextView desc = item.findViewById(R.id.tvPerkDesc);
+            Button btnBuy = item.findViewById(R.id.btnBuyPerk);
+
+            name.setText(perk.getName());
+            desc.setText(perk.getDescription());
+
+            if (perk.isPurchased()) {
+                btnBuy.setText("OWNED");
+                btnBuy.setEnabled(false);
+                item.setAlpha(0.6f);
+            } else {
+                btnBuy.setText(String.format(Locale.getDefault(), "Buy (%d)", perk.getCostEssence()));
+                boolean canAfford = cosmicEssence >= perk.getCostEssence();
+                btnBuy.setEnabled(canAfford);
+                btnBuy.setOnClickListener(v -> {
+                    cosmicEssence -= perk.getCostEssence();
+                    perk.setPurchased(true);
+                    recalculateSps();
+                    updateUI();
+                    saveGame();
+                    showEssenceShopDialog(); // reopen to refresh
+                });
+            }
+            container.addView(item);
+        }
+
+        builder.setView(dialogView).setPositiveButton("Close", (d, w) -> d.dismiss()).show();
     }
 }
