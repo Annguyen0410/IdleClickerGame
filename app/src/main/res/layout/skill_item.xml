@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/modern_panel_background">
+
+    <ImageView
+        android:id="@+id/imgSkillIcon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_skill_tree"
+        android:background="@drawable/circle_button"
+        android:backgroundTint="@color/panel_background"
+        android:padding="8dp"
+        app:tint="@color/accent_gold"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:contentDescription="Skill Icon"
+        android:layout_marginEnd="16dp"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/tvSkillName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="Skill Name (1/5)"
+            android:textColor="@color/text_color_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"/>
+        <TextView
+            android:id="@+id/tvSkillDesc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="This is the effect of the skill."
+            android:textColor="@color/text_color_secondary"
+            android:textSize="14sp"/>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnLevelUpSkill"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_marginStart="16dp"
+        android:background="@drawable/modern_button_background"
+        tools:text="UP (1)"
+        android:textColor="@color/white"
+        android:textStyle="bold"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"/>
+
+</LinearLayout>

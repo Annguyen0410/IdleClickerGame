@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Main central star -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,11 L28.1,19.6 L37.4,20.9 L30.7,27.3 L32.2,36.5 L24,32 L15.8,36.5 L17.3,27.3 L10.6,20.9 L19.9,19.6 Z" />
+
+    <!-- Group for the "shower" effect with smaller stars and sparkles -->
+    <group>
+        <!-- Smaller star, top-left -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M14,8 L16.1,12.3 L20.7,12.9 L17.4,16.1 L18.1,20.7 L14,18.5 L9.9,20.7 L10.6,16.1 L7.3,12.9 L11.9,12.3 Z" />
+
+        <!-- Smaller star, bottom-right -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M38,36 L39,38 L41,38 L39.5,39.5 L40,41.5 L38,40.2 L36,41.5 L36.5,39.5 L35,38 L37,38 Z" />
+
+        <!-- Accent Sparkles (using the new gold color) -->
+        <path
+            android:fillColor="@color/accent_gold"
+            android:pathData="M12,40 A1.5,1.5 0 1,1 9,40 A1.5,1.5 0 1,1 12,40" />
+
+        <path
+            android:fillColor="@color/accent_gold"
+            android:pathData="M42,15 A1,1 0 1,1 40,15 A1,1 0 1,1 42,15" />
+
+        <path
+            android:fillColor="@color/white"
+            android:pathData="M38,8 A1,1 0 1,1 36,8 A1,1 0 1,1 38,8" />
+    </group>
+
+</vector>

@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/background_main"
+    tools:context=".MainActivity">
+
+    <!-- Top row of buttons -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnAchievements"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="Achievements"
+        android:src="@drawable/ic_achievement_unlocked"
+        app:backgroundTint="@color/panel_background"
+        app:tint="@color/accent_gold"
+        app:layout_constraintEnd_toStartOf="@id/btnSettings"
+        app:layout_constraintTop_toTopOf="@id/btnSettings"
+        app:layout_constraintBottom_toBottomOf="@id/btnSettings"
+        app:elevation="8dp"
+        app:borderWidth="0dp"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:contentDescription="Settings"
+        android:src="@android:drawable/ic_menu_manage"
+        app:backgroundTint="@color/panel_background"
+        app:tint="@color/accent_cyan"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:elevation="8dp"
+        app:borderWidth="0dp"/>
+
+    <!-- Stats Card -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardStats"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        app:cardBackgroundColor="@color/panel_background_transparent"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+        <!-- LinearLayout for stats remains the same -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+            <TextView
+                android:id="@+id/tvStardustCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Stardust"
+                android:textColor="@color/text_color_primary"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tvSps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="per second: 0"
+                android:textColor="@color/text_color_secondary"
+                android:textSize="16sp" />
+            <TextView
+                android:id="@+id/tvSingularityCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Singularities (+0% SPS)"
+                android:textColor="@color/star_color"
+                android:textSize="14sp"
+                android:textStyle="italic" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Main Click FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnClickStar"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="24dp"
+        android:contentDescription="Tap to collect stardust"
+        android:src="@drawable/ic_star_shower"
+        app:backgroundTint="@color/star_color"
+        app:elevation="12dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/cardStats"
+        app:tint="@color/app_background"
+        app:maxImageSize="64dp"
+        app:borderWidth="0dp"
+        />
+
+    <!-- NEW: LinearLayout for Buy Amount Toggles -->
+    <LinearLayout
+        android:id="@+id/buyAmountToggleContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/btnClickStar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@drawable/modern_panel_background"
+        android:padding="4dp">
+
+        <Button
+            android:id="@+id/btnBuy1"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:minWidth="64dp"
+            android:layout_height="40dp"
+            android:text="x1"
+            android:textColor="@color/white"
+            android:background="@drawable/modern_button_background"/>
+
+        <Button
+            android:id="@+id/btnBuy10"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:minWidth="64dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:text="x10"
+            android:textColor="@color/white"
+            android:background="@drawable/modern_button_background"
+            android:alpha="0.5"/>
+
+        <Button
+            android:id="@+id/btnBuy25"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:minWidth="64dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:text="x25"
+            android:textColor="@color/white"
+            android:background="@drawable/modern_button_background"
+            android:alpha="0.5"/>
+
+    </LinearLayout>
+
+    <!-- NEW: TabLayout for switching between Upgrades and Research -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/buyAmountToggleContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@android:color/transparent"
+        app:tabTextColor="@color/text_color_secondary"
+        app:tabSelectedTextColor="@color/accent_cyan"
+        app:tabIndicatorColor="@color/accent_cyan"/>
+
+    <!-- NEW: This is where the content for each tab will go. -->
+    <!-- We will populate this from MainActivity instead of using a ViewPager for simplicity -->
+    <ScrollView
+        android:id="@+id/upgradesScrollView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginBottom="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout"
+        app:layout_constraintBottom_toTopOf="@id/bottomActionContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Both upgrade types will be populated into this container -->
+        <LinearLayout
+            android:id="@+id/llUpgradesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+
+    <!-- Bottom Action Row (Unchanged) -->
+    <LinearLayout
+        android:id="@+id/bottomActionContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+        <!-- Buttons remain the same -->
+        <Button
+            android:id="@+id/btnSkillTree"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="60dp"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/accent_gold"
+            android:padding="12dp"
+            android:text="Skills"
+            android:textColor="@color/app_background"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+        <Button
+            android:id="@+id/btnShootingStar"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:text="SHOOTING STAR"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp"/>
+        <Button
+            android:id="@+id/btnSupernova"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/supernova_button_color"
+            android:text="SUPERNOVA"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:layout_marginStart="8dp"/>
+        <!-- NEW: Big Crunch Button -->
+        <Button
+            android:id="@+id/btnBigCrunch"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/accent_cyan"
+            android:text="BIG CRUNCH"
+            android:textColor="@color/app_background"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
