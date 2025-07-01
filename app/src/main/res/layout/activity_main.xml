@@ -81,6 +81,38 @@
                 android:textColor="@color/star_color"
                 android:textSize="14sp"
                 android:textStyle="italic" />
+            <TextView
+                android:id="@+id/tvBigCrunchProgress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Big Crunch: 0%"
+                android:textColor="@color/text_color_secondary"
+                android:textSize="12sp" />
+            <ProgressBar
+                android:id="@+id/pbBigCrunchProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:max="100"
+                android:progress="0"
+                android:progressTint="@color/accent_cyan"
+                android:backgroundTint="@color/panel_background_transparent" />
+            <TextView
+                android:id="@+id/tvSupernovaProgress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Supernova: 0%"
+                android:textColor="@color/text_color_secondary"
+                android:textSize="12sp" />
+            <ProgressBar
+                android:id="@+id/pbSupernovaProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:max="100"
+                android:progress="0"
+                android:progressTint="@color/supernova_button_color"
+                android:backgroundTint="@color/panel_background_transparent" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 

@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     // --- UI Elements ---
     private TextView tvStardustCount, tvSps, tvSingularityCount;
+    private TextView tvSupernovaProgress, tvBigCrunchProgress;
     private FloatingActionButton btnClickStar, btnSettings, btnAchievements;
     private Button btnSupernova, btnShootingStar, btnSkillTree, btnBigCrunch; // MODIFIED: Added btnBigCrunch
     private Button btnBuy1, btnBuy10, btnBuy25; // NEW: Buy amount buttons
@@ -119,6 +120,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_TOTAL_STARDUST_EARNED = "totalStardustEarned";
     private static final long DAILY_REWARD_AMOUNT = 1000000000;
 
+    // NEW: Progress bars for major prestige goals
+    private ProgressBar pbSupernovaProgress, pbBigCrunchProgress;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -189,6 +193,10 @@ public class MainActivity extends AppCompatActivity {
         tvStardustCount = findViewById(R.id.tvStardustCount);
         tvSps = findViewById(R.id.tvSps);
         tvSingularityCount = findViewById(R.id.tvSingularityCount);
+        tvSupernovaProgress = findViewById(R.id.tvSupernovaProgress);
+        tvBigCrunchProgress = findViewById(R.id.tvBigCrunchProgress);
+        pbSupernovaProgress = findViewById(R.id.pbSupernovaProgress);
+        pbBigCrunchProgress = findViewById(R.id.pbBigCrunchProgress);
         btnClickStar = findViewById(R.id.btnClickStar);
         btnSettings = findViewById(R.id.btnSettings);
         btnAchievements = findViewById(R.id.btnAchievements);
@@ -614,6 +622,21 @@ public class MainActivity extends AppCompatActivity {
 
         btnSupernova.setVisibility(stardustCount.compareTo(supernovaCost) >= 0 ? View.VISIBLE : View.GONE);
         btnBigCrunch.setVisibility(singularityCount >= BIG_CRUNCH_COST ? View.VISIBLE : View.GONE);
+
+        // --- NEW: Update progress towards Supernova ---
+        int supernovaPercent;
+        if (stardustCount.compareTo(supernovaCost) >= 0) {
+            supernovaPercent = 100;
+        } else {
+            supernovaPercent = stardustCount.multiply(BigInteger.valueOf(100)).divide(supernovaCost).intValue();
+        }
+        pbSupernovaProgress.setProgress(supernovaPercent);
+        tvSupernovaProgress.setText(String.format(Locale.getDefault(), "Supernova: %d%%", supernovaPercent));
+
+        // --- NEW: Update progress towards Big Crunch ---
+        int crunchPercent = (int) Math.min(100, (singularityCount * 100.0) / BIG_CRUNCH_COST);
+        pbBigCrunchProgress.setProgress(crunchPercent);
+        tvBigCrunchProgress.setText(String.format(Locale.getDefault(), "Big Crunch: %d%%", crunchPercent));
     }
 
     // --- Number Formatting ---
