@@ -107,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
     private int totalBigCrunches = 0;
     private BigInteger highestStardust = BigInteger.ZERO;
     private long totalRiftsCollected = 0;
+    private int totalEventsExperienced = 0; // NEW: Track total events
     
     // Combo System
     private int currentCombo = 0;
@@ -168,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_TOTAL_BIG_CRUNCHES = "totalBigCrunches";
     private static final String KEY_HIGHEST_STARDUST = "highestStardust";
     private static final String KEY_TOTAL_RIFTS = "totalRifts";
+    private static final String KEY_TOTAL_EVENTS = "totalEvents"; // NEW
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -354,6 +356,16 @@ public class MainActivity extends AppCompatActivity {
         achievements.add(new Achievement("research_1", "A New Age", "Purchase your first Research upgrade.", AchievementType.RESEARCH_COUNT, 1));
         achievements.add(new Achievement("essence_1", "The Beginning is the End", "Initiate your first Big Crunch.", AchievementType.ESSENCE_COUNT, 1));
         achievements.add(new Achievement("forge_1", "Dimensional Engineer", "Build a Dimension Forge.", AchievementType.UPGRADE_COUNT, 1, 12)); // Index 12 is Dimension Forge
+        
+        // NEW: Add more achievements for new features
+        achievements.add(new Achievement("combo_50", "Combo Master", "Reach a 50x combo multiplier", AchievementType.COMBO_REACHED, 50));
+        achievements.add(new Achievement("combo_100", "Combo Legend", "Reach a 100x combo multiplier", AchievementType.COMBO_REACHED, 100));
+        achievements.add(new Achievement("constellation_1", "Stargazer", "Unlock your first constellation", AchievementType.CONSTELLATION_UNLOCKED, 1));
+        achievements.add(new Achievement("challenge_1", "Challenger", "Complete your first challenge", AchievementType.CHALLENGE_COMPLETED, 1));
+        achievements.add(new Achievement("auto_clicker", "Automation", "Unlock the Auto-Clicker", AchievementType.AUTO_CLICKER_UNLOCKED, 1));
+        achievements.add(new Achievement("event_lucky", "Lucky Star", "Experience 10 special events", AchievementType.EVENTS_EXPERIENCED, 10));
+        achievements.add(new Achievement("rift_master", "Rift Collector", "Collect 100 total rifts", AchievementType.RIFTS_COLLECTED, 100));
+        achievements.add(new Achievement("big_crunch_5", "Reality Shaper", "Perform 5 Big Crunches", AchievementType.ESSENCE_COUNT, 5));
     }
     private void setupSkills() {
         skills.clear();
@@ -431,14 +443,18 @@ public class MainActivity extends AppCompatActivity {
     private void onStarClicked() {
         animateClick(btnClickStar);
         
+        // Add haptic feedback for better user experience
+        btnClickStar.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+        
         // Check and update combo
         long currentTime = System.currentTimeMillis();
         long comboTimeout = COMBO_TIMEOUT;
         
-        // Apply constellation bonus to combo timeout
-        for (Constellation c : constellations) {
-            if (c.isUnlocked() && c.getType() == ConstellationType.COMBO_DURATION) {
-                comboTimeout = (long)(comboTimeout * c.getBonusValue());
+        // Apply constellation bonus to combo timeout (BUG FIX: only active constellation)
+        if (activeConstellationId >= 0 && activeConstellationId < constellations.size()) {
+            Constellation activeConstellation = constellations.get(activeConstellationId);
+            if (activeConstellation.isUnlocked() && activeConstellation.getType() == ConstellationType.COMBO_DURATION) {
+                comboTimeout = (long)(comboTimeout * activeConstellation.getBonusValue());
             }
         }
         
@@ -462,10 +478,11 @@ public class MainActivity extends AppCompatActivity {
         double comboMultiplier = 1.0 + (currentCombo / 100.0);
         clickValue = clickValue.multiply(BigInteger.valueOf((long)(comboMultiplier * 100))).divide(BigInteger.valueOf(100));
         
-        // Apply constellation click multiplier
-        for (Constellation c : constellations) {
-            if (c.isUnlocked() && c.getType() == ConstellationType.CLICK_MULTIPLIER) {
-                clickValue = clickValue.multiply(BigInteger.valueOf((long)(c.getBonusValue() * 100))).divide(BigInteger.valueOf(100));
+        // Apply constellation click multiplier (BUG FIX: only active constellation)
+        if (activeConstellationId >= 0 && activeConstellationId < constellations.size()) {
+            Constellation activeConstellation = constellations.get(activeConstellationId);
+            if (activeConstellation.isUnlocked() && activeConstellation.getType() == ConstellationType.CLICK_MULTIPLIER) {
+                clickValue = clickValue.multiply(BigInteger.valueOf((long)(activeConstellation.getBonusValue() * 100))).divide(BigInteger.valueOf(100));
             }
         }
         
@@ -533,7 +550,43 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void updateChallengeProgress(ChallengeType type, BigInteger amount) {
-        if (activeChallenge != null && activeChallenge.getType() == type) {
+        // BUG FIX: Check if there's an active challenge first
+        if (activeChallenge == null || !activeChallenge.isActive()) {
+            return;
+        }
+        
+        // Only update if the challenge type matches
+        if (activeChallenge.getType() == type) {
+            // Special handling for NO_UPGRADES_STARDUST challenge
+            if (type == ChallengeType.NO_UPGRADES_STARDUST) {
+                // Check if any upgrades have been bought
+                boolean hasUpgrades = false;
+                for (Upgrade upgrade : upgrades) {
+                    if (upgrade.count > 0) {
+                        hasUpgrades = true;
+                        break;
+                    }
+                }
+                if (hasUpgrades) {
+                    // Fail the challenge
+                    Toast.makeText(this, "Challenge failed: You bought an upgrade!", Toast.LENGTH_SHORT).show();
+                    activeChallenge.setActive(false);
+                    activeChallenge = null;
+                    return;
+                }
+            }
+            
+            // Special handling for SPEED_RUN challenge
+            if (type == ChallengeType.SPEED_RUN) {
+                long elapsedTime = System.currentTimeMillis() - activeChallenge.getStartTime();
+                if (elapsedTime > 300000) { // 5 minutes
+                    Toast.makeText(this, "Challenge failed: Time limit exceeded!", Toast.LENGTH_SHORT).show();
+                    activeChallenge.setActive(false);
+                    activeChallenge = null;
+                    return;
+                }
+            }
+            
             activeChallenge.addProgress(amount);
             if (activeChallenge.checkCompletion()) {
                 completeChallenge(activeChallenge);
@@ -587,6 +640,7 @@ public class MainActivity extends AppCompatActivity {
         editor.putInt(KEY_TOTAL_BIG_CRUNCHES, totalBigCrunches);
         editor.putString(KEY_HIGHEST_STARDUST, highestStardust.toString());
         editor.putLong(KEY_TOTAL_RIFTS, totalRiftsCollected);
+        editor.putInt(KEY_TOTAL_EVENTS, totalEventsExperienced); // NEW
         editor.apply();
     }
 
@@ -620,6 +674,7 @@ public class MainActivity extends AppCompatActivity {
         totalBigCrunches = prefs.getInt(KEY_TOTAL_BIG_CRUNCHES, 0);
         highestStardust = new BigInteger(prefs.getString(KEY_HIGHEST_STARDUST, "0"));
         totalRiftsCollected = prefs.getLong(KEY_TOTAL_RIFTS, 0);
+        totalEventsExperienced = prefs.getInt(KEY_TOTAL_EVENTS, 0); // NEW
         
         recalculateSps();
         updateUI();
@@ -771,6 +826,11 @@ public class MainActivity extends AppCompatActivity {
             if (isEventActive && currentEvent != null) {
                 tvEventStatus.setVisibility(View.VISIBLE);
                 long remainingTime = (eventEndTime - System.currentTimeMillis()) / 1000;
+                // BUG FIX: Don't show negative time
+                if (remainingTime < 0) {
+                    remainingTime = 0;
+                    endCurrentEvent(); // End the event if time is up
+                }
                 tvEventStatus.setText(String.format(Locale.getDefault(), "EVENT: %s (%ds)", 
                     currentEvent.getName(), remainingTime));
             } else {
@@ -791,6 +851,15 @@ public class MainActivity extends AppCompatActivity {
     // --- Number Formatting ---
     private String formatBigNumber(BigInteger number) {
         if (number.compareTo(BigInteger.valueOf(1000)) < 0) return number.toString();
+        
+        // For extremely large numbers, use scientific notation
+        if (number.toString().length() > 66) { // Beyond Vigintillion
+            BigDecimal bd = new BigDecimal(number);
+            int exponent = number.toString().length() - 1;
+            BigDecimal mantissa = bd.divide(new BigDecimal(BigInteger.TEN.pow(exponent)), 2, RoundingMode.HALF_UP);
+            return String.format(Locale.getDefault(), "%.2fe%d", mantissa.doubleValue(), exponent);
+        }
+        
         int mag = (number.toString().length() - 1) / 3;
         if (mag >= numberSuffixes.length) mag = numberSuffixes.length - 1;
         BigDecimal shortValue = new BigDecimal(number).divide(
@@ -799,23 +868,46 @@ public class MainActivity extends AppCompatActivity {
     }
     private static final String[] numberSuffixes = {
             "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc",
-            "UDc", "DDc", "TDc", "QaDc", "QiDc", "SxDc", "SpDc", "OcDc", "NoDc", "Vg"
+            "UDc", "DDc", "TDc", "QaDc", "QiDc", "SxDc", "SpDc", "OcDc", "NoDc", "Vg",
+            "UVg", "DVg", "TVg", "QaVg", "QiVg", "SxVg", "SpVg", "OcVg", "NoVg", "Tg"
     };
 
     // --- Helper Methods ---
     private BigInteger calculateCostForNUpgrades(Upgrade upgrade, int amount, boolean isCheaperResearch) {
         BigInteger totalCost = BigInteger.ZERO;
 
-        // This is a "dry run" of the buyMultiple logic.
-        // It's not ideal to temporarily change object state, but it's the only way
-        // without access to the Upgrade class's internal cost formula.
-        int originalCount = upgrade.count;
+        // BUG FIX: Calculate costs without modifying the upgrade's state
+        int currentCount = upgrade.count;
         for (int i = 0; i < amount; i++) {
-            BigInteger costForThisLevel = getAdjustedUpgradeCost(upgrade.getNextCost(isCheaperResearch));
+            // Simulate the cost for each subsequent level
+            BigInteger baseCost = upgrade.getBaseCost();
+            // Assuming geometric progression: cost = baseCost * 1.15^currentCount
+            double multiplier = Math.pow(1.15, currentCount + i);
+            BigInteger costForThisLevel = new BigDecimal(baseCost).multiply(BigDecimal.valueOf(multiplier)).toBigInteger();
+            
+            // Apply research discount
+            if (isCheaperResearch) {
+                costForThisLevel = costForThisLevel.multiply(BigInteger.valueOf(95)).divide(BigInteger.valueOf(100));
+            }
+            
+            // Apply skill discount
+            costForThisLevel = getAdjustedUpgradeCost(costForThisLevel);
+            
+            // Apply constellation discount (BUG FIX: only active constellation)
+            if (activeConstellationId >= 0 && activeConstellationId < constellations.size()) {
+                Constellation activeConstellation = constellations.get(activeConstellationId);
+                if (activeConstellation.isUnlocked() && activeConstellation.getType() == ConstellationType.UPGRADE_DISCOUNT) {
+                    costForThisLevel = costForThisLevel.multiply(BigInteger.valueOf((long)(activeConstellation.getBonusValue() * 100))).divide(BigInteger.valueOf(100));
+                }
+            }
+            
+            // Apply event discount
+            if (currentEvent == EventType.DISCOUNT_DAY) {
+                costForThisLevel = costForThisLevel.multiply(BigInteger.valueOf(50)).divide(BigInteger.valueOf(100));
+            }
+            
             totalCost = totalCost.add(costForThisLevel);
-            upgrade.count++; // Increment count to get the cost for the *next* level in the next iteration
         }
-        upgrade.count = originalCount; // IMPORTANT: Reset the count back to its original value
 
         return totalCost;
     }
@@ -877,13 +969,24 @@ public class MainActivity extends AppCompatActivity {
         // Only show the dialog if offline for a meaningful amount of time (e.g., > 1 minute)
         if (offlineSeconds > 60) {
             long offlineSps = totalSps / boostMultiplier;
-            BigInteger stardustEarned = BigInteger.valueOf(offlineSps).multiply(BigInteger.valueOf(offlineSeconds));
+            BigInteger stardustFromSps = BigInteger.valueOf(offlineSps).multiply(BigInteger.valueOf(offlineSeconds));
+            
+            // BUG FIX: Calculate auto-clicker earnings during offline time
+            BigInteger stardustFromAutoClicker = BigInteger.ZERO;
+            if (autoClickerUnlocked && autoClickerLevel > 0) {
+                // Calculate auto-clicks per second
+                long autoClicksPerSecond = 1000 / AUTO_CLICK_INTERVAL;
+                BigInteger autoClickValue = BigInteger.valueOf(autoClickerLevel);
+                stardustFromAutoClicker = autoClickValue.multiply(BigInteger.valueOf(autoClicksPerSecond * offlineSeconds));
+            }
+            
+            BigInteger totalStardustEarned = stardustFromSps.add(stardustFromAutoClicker);
 
-            stardustCount = stardustCount.add(stardustEarned);
-            totalStardustEverEarned = totalStardustEverEarned.add(stardustEarned);
+            stardustCount = stardustCount.add(totalStardustEarned);
+            totalStardustEverEarned = totalStardustEverEarned.add(totalStardustEarned);
 
-            // Show the new dialog instead of a Toast
-            showOfflineProgressDialog(offlineSeconds, offlineSps, stardustEarned);
+            // Show the new dialog with detailed breakdown
+            showOfflineProgressDialog(offlineSeconds, offlineSps, stardustFromSps, stardustFromAutoClicker);
 
             // Still need to update the UI and check achievements after the dialog is closed
             updateUI();
@@ -891,7 +994,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showOfflineProgressDialog(long offlineSeconds, long offlineSps, BigInteger stardustEarned) {
+    private void showOfflineProgressDialog(long offlineSeconds, long offlineSps, BigInteger stardustFromSps, BigInteger stardustFromAutoClicker) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_offline_progress, null);
 
@@ -907,7 +1010,16 @@ public class MainActivity extends AppCompatActivity {
 
         tvOfflineTime.setText(timeAwayText);
         tvOfflineSps.setText(String.format("Your empire generated: %s/s", formatBigNumber(BigInteger.valueOf(offlineSps))));
-        tvOfflineStardust.setText(formatBigNumber(stardustEarned));
+        
+        // Show detailed breakdown
+        BigInteger totalEarned = stardustFromSps.add(stardustFromAutoClicker);
+        String breakdownText = "Total Earned: " + formatBigNumber(totalEarned);
+        if (!stardustFromAutoClicker.equals(BigInteger.ZERO)) {
+            breakdownText += "\n\nBreakdown:\n";
+            breakdownText += "From SPS: " + formatBigNumber(stardustFromSps) + "\n";
+            breakdownText += "From Auto-Clicker: " + formatBigNumber(stardustFromAutoClicker);
+        }
+        tvOfflineStardust.setText(breakdownText);
 
         builder.setView(dialogView);
         builder.setCancelable(false); // Player must click the button
@@ -963,10 +1075,11 @@ public class MainActivity extends AppCompatActivity {
                     long currentTime = System.currentTimeMillis();
                     long autoClickInterval = AUTO_CLICK_INTERVAL;
                     
-                    // Apply constellation bonus
-                    for (Constellation c : constellations) {
-                        if (c.isUnlocked() && c.getType() == ConstellationType.AUTO_CLICK_SPEED) {
-                            autoClickInterval = (long)(autoClickInterval / c.getBonusValue());
+                    // Apply constellation bonus (BUG FIX: only active constellation)
+                    if (activeConstellationId >= 0 && activeConstellationId < constellations.size()) {
+                        Constellation activeConstellation = constellations.get(activeConstellationId);
+                        if (activeConstellation.isUnlocked() && activeConstellation.getType() == ConstellationType.AUTO_CLICK_SPEED) {
+                            autoClickInterval = (long)(autoClickInterval / activeConstellation.getBonusValue());
                         }
                     }
                     
@@ -1016,6 +1129,7 @@ public class MainActivity extends AppCompatActivity {
         currentEvent = events[random.nextInt(events.length)];
         isEventActive = true;
         eventEndTime = System.currentTimeMillis() + 60000; // 1 minute duration
+        totalEventsExperienced++; // NEW: Increment counter
         
         Toast.makeText(this, "EVENT: " + currentEvent.getName() + "\n" + 
             currentEvent.getDescription(), Toast.LENGTH_LONG).show();
@@ -1026,6 +1140,7 @@ public class MainActivity extends AppCompatActivity {
         }
         
         updateUI();
+        checkAchievements(); // Check achievements after incrementing counter
     }
     
     private void endCurrentEvent() {
@@ -1044,10 +1159,11 @@ public class MainActivity extends AppCompatActivity {
                 spawnRift();
                 int baseDelay = 20000 + random.nextInt(25000);
                 
-                // Apply constellation bonus
-                for (Constellation c : constellations) {
-                    if (c.isUnlocked() && c.getType() == ConstellationType.RIFT_FREQUENCY) {
-                        baseDelay = (int)(baseDelay / c.getBonusValue());
+                // Apply constellation bonus (BUG FIX: only active constellation)
+                if (activeConstellationId >= 0 && activeConstellationId < constellations.size()) {
+                    Constellation activeConstellation = constellations.get(activeConstellationId);
+                    if (activeConstellation.isUnlocked() && activeConstellation.getType() == ConstellationType.RIFT_FREQUENCY) {
+                        baseDelay = (int)(baseDelay / activeConstellation.getBonusValue());
                     }
                 }
                 
@@ -1150,10 +1266,54 @@ public class MainActivity extends AppCompatActivity {
             if (!achievement.isUnlocked()) {
                 boolean newlyUnlocked = false;
                 switch (achievement.getType()) {
-                    case TOTAL_CLICKS: if (totalClicks >= achievement.getGoal()) newlyUnlocked = true; break;
-                    case TOTAL_STARDUST: if (totalStardustEverEarned.compareTo(BigInteger.valueOf(achievement.getGoal())) >= 0) newlyUnlocked = true; break;
-                    case UPGRADE_COUNT: int index = achievement.getTargetUpgradeIndex(); if (index >= 0 && index < upgrades.size() && upgrades.get(index).count >= achievement.getGoal()) newlyUnlocked = true; break;
-                    case REACH_SPS: if (totalSps >= achievement.getGoal()) newlyUnlocked = true; break;
+                    case TOTAL_CLICKS: 
+                        if (totalClicks >= achievement.getGoal()) newlyUnlocked = true; 
+                        break;
+                    case TOTAL_STARDUST: 
+                        if (totalStardustEverEarned.compareTo(BigInteger.valueOf(achievement.getGoal())) >= 0) newlyUnlocked = true; 
+                        break;
+                    case UPGRADE_COUNT: 
+                        int index = achievement.getTargetUpgradeIndex(); 
+                        if (index >= 0 && index < upgrades.size() && upgrades.get(index).count >= achievement.getGoal()) newlyUnlocked = true; 
+                        break;
+                    case REACH_SPS: 
+                        if (totalSps >= achievement.getGoal()) newlyUnlocked = true; 
+                        break;
+                    case SINGULARITY_COUNT:
+                        if (singularityCount >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case RESEARCH_COUNT:
+                        int researchCount = 0;
+                        for (ResearchUpgrade r : researchUpgrades) {
+                            if (r.isPurchased()) researchCount++;
+                        }
+                        if (researchCount >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case ESSENCE_COUNT:
+                        if (cosmicEssence >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case COMBO_REACHED:
+                        if (currentCombo >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case CONSTELLATION_UNLOCKED:
+                        int constellationCount = 0;
+                        for (Constellation c : constellations) {
+                            if (c.isUnlocked()) constellationCount++;
+                        }
+                        if (constellationCount >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case CHALLENGE_COMPLETED:
+                        if (getCompletedChallengesCount() >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case AUTO_CLICKER_UNLOCKED:
+                        if (autoClickerUnlocked) newlyUnlocked = true;
+                        break;
+                    case EVENTS_EXPERIENCED:
+                        if (totalEventsExperienced >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case RIFTS_COLLECTED:
+                        if (totalRiftsCollected >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
                 }
                 if (newlyUnlocked) unlockAchievement(achievement);
             }
@@ -1405,10 +1565,11 @@ public class MainActivity extends AppCompatActivity {
             cost = cost.multiply(BigInteger.valueOf(95)).divide(BigInteger.valueOf(100));
         }
         
-        // Apply constellation discount
-        for (Constellation c : constellations) {
-            if (c.isUnlocked() && c.getType() == ConstellationType.RESEARCH_SPEED) {
-                cost = cost.multiply(BigInteger.valueOf((long)(c.getBonusValue() * 100))).divide(BigInteger.valueOf(100));
+        // Apply constellation discount (BUG FIX: only active constellation)
+        if (activeConstellationId >= 0 && activeConstellationId < constellations.size()) {
+            Constellation activeConstellation = constellations.get(activeConstellationId);
+            if (activeConstellation.isUnlocked() && activeConstellation.getType() == ConstellationType.RESEARCH_SPEED) {
+                cost = cost.multiply(BigInteger.valueOf((long)(activeConstellation.getBonusValue() * 100))).divide(BigInteger.valueOf(100));
             }
         }
         
@@ -1445,10 +1606,11 @@ public class MainActivity extends AppCompatActivity {
         BigDecimal spsSkillBonus = BigDecimal.valueOf(spsSkillLevel * 0.02);
         totalSpsDecimal = totalSpsDecimal.multiply(BigDecimal.ONE.add(spsSkillBonus));
         
-        // Apply constellation SPS multiplier
-        for (Constellation c : constellations) {
-            if (c.isUnlocked() && c.getType() == ConstellationType.SPS_MULTIPLIER) {
-                totalSpsDecimal = totalSpsDecimal.multiply(BigDecimal.valueOf(c.getBonusValue()));
+        // Apply constellation SPS multiplier (BUG FIX: only apply active constellation)
+        if (activeConstellationId >= 0 && activeConstellationId < constellations.size()) {
+            Constellation activeConstellation = constellations.get(activeConstellationId);
+            if (activeConstellation.isUnlocked() && activeConstellation.getType() == ConstellationType.SPS_MULTIPLIER) {
+                totalSpsDecimal = totalSpsDecimal.multiply(BigDecimal.valueOf(activeConstellation.getBonusValue()));
             }
         }
         
@@ -1470,41 +1632,98 @@ public class MainActivity extends AppCompatActivity {
 
     private void triggerSupernova() {
         if (stardustCount.compareTo(supernovaCost) >= 0) {
-            double earned = Math.max(1, Math.log10(stardustCount.doubleValue()) - 11);
+            // Calculate expected singularities
+            double expectedEarned = Math.max(1, Math.log10(stardustCount.doubleValue()) - 11);
             int singSkillLevel = getSkillLevel("sing_1");
             double singSkillBonus = singSkillLevel * 0.02;
-            earned = earned * (1 + singSkillBonus);
+            expectedEarned = expectedEarned * (1 + singSkillBonus);
             
-            // Apply constellation bonus
-            for (Constellation c : constellations) {
-                if (c.isUnlocked() && c.getType() == ConstellationType.SINGULARITY_BONUS) {
-                    earned = earned * c.getBonusValue();
+            // Apply constellation bonus (BUG FIX: only active constellation)
+            if (activeConstellationId >= 0 && activeConstellationId < constellations.size()) {
+                Constellation activeConstellation = constellations.get(activeConstellationId);
+                if (activeConstellation.isUnlocked() && activeConstellation.getType() == ConstellationType.SINGULARITY_BONUS) {
+                    expectedEarned = expectedEarned * activeConstellation.getBonusValue();
                 }
             }
             
             // Apply event bonus
             if (currentEvent == EventType.SINGULARITY_SURGE) {
-                earned = earned * 1.5;
+                expectedEarned = expectedEarned * 1.5;
             }
             
-            int earnedSingularities = (int) earned;
-
-            singularityCount += earnedSingularities;
-            totalSupernovas++;
-            Toast.makeText(this, "SUPERNOVA! You earned " + earnedSingularities + " Singularities!", Toast.LENGTH_LONG).show();
-
-            // Reset everything EXCEPT singularities, essence, skills, and constellation points
-            stardustCount = BigInteger.ZERO;
-            totalClicks = 0;
-            currentCombo = 0;
-            for (Upgrade upgrade : upgrades) upgrade.count = 0;
-            for (ResearchUpgrade research : researchUpgrades) research.setPurchased(false);
-
-            saveGame(); // Save new singularity count
-            loadGame(); // Reload to apply bonuses and update UI
+            int expectedSingularities = (int) expectedEarned;
+            
+            // Show confirmation dialog with expected gains
+            new MaterialAlertDialogBuilder(this)
+                .setTitle("Trigger Supernova?")
+                .setMessage(String.format(Locale.getDefault(), 
+                    "This will reset your progress but grant you %d Singularities!\n\n" +
+                    "Current Stardust: %s\n" +
+                    "Current Singularities: %d\n" +
+                    "After Supernova: %d (+%d)\n\n" +
+                    "Singularities provide permanent %d%% SPS boost each.",
+                    expectedSingularities, 
+                    formatBigNumber(stardustCount),
+                    singularityCount,
+                    singularityCount + expectedSingularities,
+                    expectedSingularities,
+                    (int)(getSingularityBonus() * 100)))
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("SUPERNOVA!", (dialog, which) -> {
+                    performSupernova(expectedSingularities);
+                })
+                .show();
         } else {
             Toast.makeText(this, "You need at least " + formatBigNumber(supernovaCost) + " stardust to go Supernova.", Toast.LENGTH_SHORT).show();
         }
+    }
+    
+    private void performSupernova(int earnedSingularities) {
+        singularityCount += earnedSingularities;
+        totalSupernovas++;
+        
+        // Show animation
+        showSupernovaAnimation();
+        
+        Toast.makeText(this, "SUPERNOVA! You earned " + earnedSingularities + " Singularities!", Toast.LENGTH_LONG).show();
+
+        // Reset everything EXCEPT singularities, essence, skills, and constellation points
+        stardustCount = BigInteger.ZERO;
+        totalClicks = 0;
+        currentCombo = 0;
+        for (Upgrade upgrade : upgrades) upgrade.count = 0;
+        for (ResearchUpgrade research : researchUpgrades) research.setPurchased(false);
+
+        saveGame(); // Save new singularity count
+        loadGame(); // Reload to apply bonuses and update UI
+    }
+    
+    private void showSupernovaAnimation() {
+        // Create a full-screen flash effect
+        View flashView = new View(this);
+        flashView.setBackgroundColor(getResources().getColor(R.color.white, getTheme()));
+        ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(
+            ConstraintLayout.LayoutParams.MATCH_PARENT,
+            ConstraintLayout.LayoutParams.MATCH_PARENT
+        );
+        rootLayout.addView(flashView, params);
+        
+        ObjectAnimator fadeIn = ObjectAnimator.ofFloat(flashView, "alpha", 0f, 1f);
+        fadeIn.setDuration(200);
+        
+        ObjectAnimator fadeOut = ObjectAnimator.ofFloat(flashView, "alpha", 1f, 0f);
+        fadeOut.setDuration(800);
+        fadeOut.setStartDelay(200);
+        
+        AnimatorSet animSet = new AnimatorSet();
+        animSet.playSequentially(fadeIn, fadeOut);
+        animSet.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                rootLayout.removeView(flashView);
+            }
+        });
+        animSet.start();
     }
 
     // --- NEW: Big Crunch Methods ---

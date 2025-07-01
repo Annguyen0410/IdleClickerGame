@@ -13,6 +13,7 @@ public class Challenge {
     private BigInteger currentProgress;
     private boolean isCompleted;
     private boolean isActive;
+    private long startTime;
     
     public Challenge(String id, String name, String description, ChallengeType type,
                     BigInteger targetValue, int rewardSingularities, int rewardConstellationPoints) {
@@ -26,6 +27,7 @@ public class Challenge {
         this.currentProgress = BigInteger.ZERO;
         this.isCompleted = false;
         this.isActive = false;
+        this.startTime = 0;
     }
     
     public boolean checkCompletion() {
@@ -48,11 +50,17 @@ public class Challenge {
     public BigInteger getCurrentProgress() { return currentProgress; }
     public boolean isCompleted() { return isCompleted; }
     public boolean isActive() { return isActive; }
+    public long getStartTime() { return startTime; }
     
     // Setters
     public void setCurrentProgress(BigInteger progress) { this.currentProgress = progress; }
     public void addProgress(BigInteger amount) { this.currentProgress = currentProgress.add(amount); }
-    public void setActive(boolean active) { this.isActive = active; }
+    public void setActive(boolean active) { 
+        this.isActive = active; 
+        if (active) {
+            this.startTime = System.currentTimeMillis();
+        }
+    }
     public void setCompleted(boolean completed) { this.isCompleted = completed; }
 }
 
