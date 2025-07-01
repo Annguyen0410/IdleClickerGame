@@ -36,4 +36,16 @@
         android:textColor="@color/text_color_secondary"
         android:textSize="18sp"
         android:enabled="false"/>
+
+    <Button
+        android:id="@+id/btnStatistics"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="📊 View Statistics"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="@drawable/modern_button_background"
+        android:backgroundTint="@color/accent_cyan"
+        android:textColor="@color/white"/>
 </LinearLayout>

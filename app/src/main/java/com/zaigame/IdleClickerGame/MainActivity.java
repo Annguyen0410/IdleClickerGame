@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvStardustCount, tvSps, tvSingularityCount;
     private FloatingActionButton btnClickStar, btnSettings, btnAchievements;
     private Button btnSupernova, btnShootingStar, btnSkillTree, btnBigCrunch; // MODIFIED: Added btnBigCrunch
+    private Button btnAutoClicker; // NEW: Auto-clicker button
     private Button btnBuy1, btnBuy10, btnBuy25; // NEW: Buy amount buttons
     private LinearLayout llUpgradesContainer;
     private ConstraintLayout rootLayout;
@@ -82,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
     private final List<ResearchUpgrade> researchUpgrades = new ArrayList<>();
     private final List<Achievement> achievements = new ArrayList<>();
     private final List<Skill> skills = new ArrayList<>();
+    private final List<Mastery> masteries = new ArrayList<>(); // NEW: Mastery system
 
     // --- Handlers ---
     private final Handler gameLoopHandler = new Handler();
@@ -104,11 +106,24 @@ public class MainActivity extends AppCompatActivity {
     private SoundPool soundPool;
     private int clickSoundId, upgradeSoundId, milestoneSoundId, achievementSoundId, riftSoundId;
 
-    // --- SharedPreferences Keys ---
+    // --- NEW: Statistics Variables ---
+    private int totalSupernovas = 0;
+    private int totalBigCrunches = 0;
+    private int totalRiftsTapped = 0;
+    private long gameStartTime = 0;
+
+    // --- NEW: SharedPreferences Keys ---
     private static final String PREFS_NAME = "CosmicClickerPrefs";
     private static final String KEY_STARDUST = "stardustCount";
     private static final String KEY_SINGULARITY = "singularityCount";
     private static final String KEY_COSMIC_ESSENCE = "cosmicEssence"; // NEW
+    private static final String KEY_AUTO_CLICKER_LEVEL = "autoClickerLevel"; // NEW
+    private static final String KEY_TOTAL_SUPERNOVAS = "totalSupernovas"; // NEW
+    private static final String KEY_TOTAL_BIG_CRUNCHES = "totalBigCrunches"; // NEW
+    private static final String KEY_TOTAL_RIFTS_TAPPED = "totalRiftsTapped"; // NEW
+    private static final String KEY_GAME_START_TIME = "gameStartTime"; // NEW
+    private static final String KEY_MASTERY_LEVEL_PREFIX = "mastery_level_"; // NEW
+    private static final String KEY_MASTERY_XP_PREFIX = "mastery_xp_"; // NEW
     private static final String KEY_UPGRADE_COUNT_PREFIX = "upgrade_count_";
     private static final String KEY_RESEARCH_PREFIX = "research_";
     private static final String KEY_ACHIEVEMENT_PREFIX = "achievement_";
@@ -118,6 +133,13 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_TOTAL_CLICKS = "totalClicks";
     private static final String KEY_TOTAL_STARDUST_EARNED = "totalStardustEarned";
     private static final long DAILY_REWARD_AMOUNT = 1000000000;
+
+    // --- NEW: Auto-Clicker Variables ---
+    private boolean autoClickerActive = false;
+    private int autoClickerLevel = 0;
+    private final int AUTO_CLICKER_BASE_COST = 1000000; // 1 Million stardust
+    private final Handler autoClickHandler = new Handler();
+    private Runnable autoClickRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
         setupResearchUpgrades();
         setupAchievements();
         setupSkills();
+        setupMasteries(); // NEW: Setup mastery system
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         loadGame();
@@ -159,6 +182,7 @@ public class MainActivity extends AppCompatActivity {
         riftHandler.removeCallbacks(riftSpawnerRunnable);
         twinkleHandler.removeCallbacksAndMessages(null);
         autoSaveHandler.removeCallbacks(autoSaveRunnable);
+        stopAutoClicker(); // NEW: Stop auto-clicker when paused
     }
     @Override
     protected void onResume() {
@@ -169,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
         startRiftSpawner();
         startAutoSave();
         createTwinklingStars(15);
+        if (autoClickerLevel > 0) startAutoClicker(); // NEW: Restart auto-clicker when resumed
     }
     @Override
     protected void onDestroy() {
@@ -177,6 +202,7 @@ public class MainActivity extends AppCompatActivity {
         riftHandler.removeCallbacks(riftSpawnerRunnable);
         twinkleHandler.removeCallbacksAndMessages(null);
         autoSaveHandler.removeCallbacks(autoSaveRunnable);
+        autoClickHandler.removeCallbacksAndMessages(null); // NEW: Clean up auto-clicker
         if (soundPool != null) {
             soundPool.release();
             soundPool = null;
@@ -196,6 +222,7 @@ public class MainActivity extends AppCompatActivity {
         btnSupernova = findViewById(R.id.btnSupernova);
         btnShootingStar = findViewById(R.id.btnShootingStar);
         btnBigCrunch = findViewById(R.id.btnBigCrunch); // NEW
+        btnAutoClicker = findViewById(R.id.btnAutoClicker); // NEW
         llUpgradesContainer = findViewById(R.id.llUpgradesContainer);
         tabLayout = findViewById(R.id.tabLayout);
 
@@ -217,6 +244,9 @@ public class MainActivity extends AppCompatActivity {
         btnBuy1.setOnClickListener(v -> setBuyAmount(1));
         btnBuy10.setOnClickListener(v -> setBuyAmount(10));
         btnBuy25.setOnClickListener(v -> setBuyAmount(25));
+
+        // --- NEW: Auto-clicker button click listener ---
+        btnAutoClicker.setOnClickListener(v -> upgradeAutoClicker());
     }
     private void setupTabs() {
         tabLayout.addTab(tabLayout.newTab().setText("Celestial Objects"));
@@ -275,6 +305,13 @@ public class MainActivity extends AppCompatActivity {
         achievements.add(new Achievement("research_1", "A New Age", "Purchase your first Research upgrade.", AchievementType.RESEARCH_COUNT, 1));
         achievements.add(new Achievement("essence_1", "The Beginning is the End", "Initiate your first Big Crunch.", AchievementType.ESSENCE_COUNT, 1));
         achievements.add(new Achievement("forge_1", "Dimensional Engineer", "Build a Dimension Forge.", AchievementType.UPGRADE_COUNT, 1, 12)); // Index 12 is Dimension Forge
+        
+        // --- NEW: Auto-Clicker and Mastery Achievements ---
+        achievements.add(new Achievement("auto_clicker_1", "Automated Assistant", "Activate your first Auto-Clicker.", AchievementType.AUTO_CLICKER_LEVEL, 1));
+        achievements.add(new Achievement("auto_clicker_5", "Clicking Machine", "Upgrade Auto-Clicker to level 5.", AchievementType.AUTO_CLICKER_LEVEL, 5));
+        achievements.add(new Achievement("mastery_1", "First Mastery", "Reach mastery level 1 on any upgrade.", AchievementType.MASTERY_COUNT, 1));
+        achievements.add(new Achievement("mastery_10", "Master of the Cosmos", "Reach mastery level 5 on any upgrade.", AchievementType.MASTERY_COUNT, 5));
+        achievements.add(new Achievement("rifts_10", "Rift Walker", "Tap 10 Cosmic Rifts.", AchievementType.RIFTS_TAPPED, 10));
     }
     private void setupSkills() {
         skills.clear();
@@ -294,6 +331,13 @@ public class MainActivity extends AppCompatActivity {
         skills.add(new Skill("sing_1", "Supernova Insight", "+2% Singularities earned per level.", SkillType.SINGULARITY_BOOST, 10, 3, null));
         skills.add(new Skill("sing_2", "Singularity Attunement", "Singularity SPS bonus is +1% stronger per level.", SkillType.SINGULARITY_BOOST, 5, 50, "sing_1"));
     }
+    private void setupMasteries() {
+        masteries.clear();
+        // Create a mastery for each upgrade
+        for (int i = 0; i < upgrades.size(); i++) {
+            masteries.add(new Mastery(i));
+        }
+    }
 
     // --- Core Game Logic ---
     private void onStarClicked() {
@@ -304,6 +348,14 @@ public class MainActivity extends AppCompatActivity {
             clickValue = clickValue.add(BigInteger.valueOf(totalSps / 100));
         }
         showStardustPopup(clickValue, btnClickStar);
+        
+        // NEW: Enhanced particle effects on click
+        createEnhancedClickParticles(
+            btnClickStar.getX() + btnClickStar.getWidth() / 2f,
+            btnClickStar.getY() + btnClickStar.getHeight() / 2f,
+            clickValue
+        );
+        
         stardustCount = stardustCount.add(clickValue);
         totalClicks++;
         totalStardustEverEarned = totalStardustEverEarned.add(clickValue);
@@ -322,12 +374,22 @@ public class MainActivity extends AppCompatActivity {
         BigInteger totalCost = calculateCostForNUpgrades(upgrade, amount, getResearch("research_cheaper").isPurchased());
         if (stardustCount.compareTo(totalCost) >= 0) {
             stardustCount = stardustCount.subtract(totalCost);
+            
+            // Find upgrade index for mastery
+            int upgradeIndex = upgrades.indexOf(upgrade);
+            
             // Now, actually increment the counts
             for (int i = 0; i < amount; i++) {
                 if (upgrade.count % Upgrade.MILESTONE_INTERVAL == 0 && i > 0) { // Check for milestones within the bulk purchase
                     playMilestoneSound();
                 }
                 upgrade.count++;
+                
+                // NEW: Add mastery experience (more XP for expensive upgrades)
+                if (upgradeIndex >= 0 && upgradeIndex < masteries.size()) {
+                    int xpGain = Math.max(1, upgradeIndex + 1); // Later upgrades give more XP
+                    masteries.get(upgradeIndex).addExperience(xpGain);
+                }
             }
             playUpgradeSound();
             recalculateSps();
@@ -364,9 +426,18 @@ public class MainActivity extends AppCompatActivity {
         // Get the skill level BEFORE the loop
         int celestialArchitectureLevel = getSkillLevel("arch_1");
 
-        for (Upgrade upgrade : upgrades) {
+        for (int i = 0; i < upgrades.size(); i++) {
+            Upgrade upgrade = upgrades.get(i);
             // Pass the skill level as the second argument
-            totalSpsDecimal = totalSpsDecimal.add(upgrade.getTotalCpsForThisUpgrade(harmonicResonance, celestialArchitectureLevel));
+            BigDecimal upgradeCps = upgrade.getTotalCpsForThisUpgrade(harmonicResonance, celestialArchitectureLevel);
+            
+            // NEW: Apply mastery bonus
+            if (i < masteries.size()) {
+                double masteryBonus = masteries.get(i).getBonusMultiplier();
+                upgradeCps = upgradeCps.multiply(BigDecimal.valueOf(masteryBonus));
+            }
+            
+            totalSpsDecimal = totalSpsDecimal.add(upgradeCps);
         }
 
         if (getResearch("research_sps_boost").isPurchased()) {
@@ -397,6 +468,7 @@ public class MainActivity extends AppCompatActivity {
             int earnedSingularities = (int) earned;
 
             singularityCount += earnedSingularities;
+            totalSupernovas++; // NEW: Track supernova count
             Toast.makeText(this, "SUPERNOVA! You earned " + earnedSingularities + " Singularities!", Toast.LENGTH_LONG).show();
 
             // Reset everything EXCEPT singularities, essence and skills
@@ -421,6 +493,7 @@ public class MainActivity extends AppCompatActivity {
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("DO IT", (dialog, which) -> {
                         cosmicEssence++;
+                        totalBigCrunches++; // NEW: Track big crunch count
                         singularityCount = 0; // Reset singularities
 
                         Toast.makeText(this, "BIG CRUNCH! You have earned 1 Cosmic Essence!", Toast.LENGTH_LONG).show();
@@ -453,15 +526,26 @@ public class MainActivity extends AppCompatActivity {
         editor.putString(KEY_STARDUST, stardustCount.toString());
         editor.putInt(KEY_SINGULARITY, singularityCount);
         editor.putInt(KEY_COSMIC_ESSENCE, cosmicEssence); // NEW
+        editor.putInt(KEY_AUTO_CLICKER_LEVEL, autoClickerLevel); // NEW
         for (int i = 0; i < upgrades.size(); i++) editor.putInt(KEY_UPGRADE_COUNT_PREFIX + i, upgrades.get(i).count);
         for (ResearchUpgrade research : researchUpgrades) editor.putBoolean(KEY_RESEARCH_PREFIX + research.getId(), research.isPurchased());
         for (Achievement achievement : achievements) editor.putBoolean(KEY_ACHIEVEMENT_PREFIX + achievement.getId(), achievement.isUnlocked());
         for (Skill skill : skills) {
             editor.putInt(KEY_SKILL_LEVEL_PREFIX + skill.getId(), skill.getCurrentLevel());
         }
+        // NEW: Save mastery data
+        for (int i = 0; i < masteries.size(); i++) {
+            Mastery mastery = masteries.get(i);
+            editor.putInt(KEY_MASTERY_LEVEL_PREFIX + i, mastery.getLevel());
+            editor.putInt(KEY_MASTERY_XP_PREFIX + i, mastery.getExperience());
+        }
         editor.putLong(KEY_TOTAL_CLICKS, totalClicks);
         editor.putString(KEY_TOTAL_STARDUST_EARNED, totalStardustEverEarned.toString());
         editor.putLong(KEY_LAST_ONLINE_TIME, System.currentTimeMillis());
+        editor.putInt(KEY_TOTAL_SUPERNOVAS, totalSupernovas);
+        editor.putInt(KEY_TOTAL_BIG_CRUNCHES, totalBigCrunches);
+        editor.putInt(KEY_TOTAL_RIFTS_TAPPED, totalRiftsTapped);
+        editor.putLong(KEY_GAME_START_TIME, gameStartTime);
         editor.apply();
     }
 
@@ -469,17 +553,40 @@ public class MainActivity extends AppCompatActivity {
         stardustCount = new BigInteger(prefs.getString(KEY_STARDUST, "0"));
         singularityCount = prefs.getInt(KEY_SINGULARITY, 0);
         cosmicEssence = prefs.getInt(KEY_COSMIC_ESSENCE, 0); // NEW
+        autoClickerLevel = prefs.getInt(KEY_AUTO_CLICKER_LEVEL, 0); // NEW
         for (int i = 0; i < upgrades.size(); i++) upgrades.get(i).count = prefs.getInt(KEY_UPGRADE_COUNT_PREFIX + i, 0);
         for (ResearchUpgrade research : researchUpgrades) research.setPurchased(prefs.getBoolean(KEY_RESEARCH_PREFIX + research.getId(), false));
         for (Achievement achievement : achievements) achievement.setUnlocked(prefs.getBoolean(KEY_ACHIEVEMENT_PREFIX + achievement.getId(), false));
         for (Skill skill : skills) {
             skill.setCurrentLevel(prefs.getInt(KEY_SKILL_LEVEL_PREFIX + skill.getId(), 0));
         }
+        // NEW: Load mastery data
+        for (int i = 0; i < masteries.size(); i++) {
+            Mastery mastery = masteries.get(i);
+            mastery.setLevel(prefs.getInt(KEY_MASTERY_LEVEL_PREFIX + i, 0));
+            mastery.setExperience(prefs.getInt(KEY_MASTERY_XP_PREFIX + i, 0));
+        }
         totalClicks = prefs.getLong(KEY_TOTAL_CLICKS, 0);
         totalStardustEverEarned = new BigInteger(prefs.getString(KEY_TOTAL_STARDUST_EARNED, "0"));
+        totalSupernovas = prefs.getInt(KEY_TOTAL_SUPERNOVAS, 0);
+        totalBigCrunches = prefs.getInt(KEY_TOTAL_BIG_CRUNCHES, 0);
+        totalRiftsTapped = prefs.getInt(KEY_TOTAL_RIFTS_TAPPED, 0);
+        gameStartTime = prefs.getLong(KEY_GAME_START_TIME, 0);
+        
+        // NEW: Initialize game start time if this is first load
+        if (gameStartTime == 0) {
+            gameStartTime = System.currentTimeMillis();
+            prefs.edit().putLong(KEY_GAME_START_TIME, gameStartTime).apply();
+        }
+        
         recalculateSps();
         updateUI();
         if (tabLayout.getSelectedTabPosition() == 0) refreshCelestialObjectsUI(); else refreshResearchUI();
+        
+        // NEW: Start auto-clicker if it was active
+        if (autoClickerLevel > 0) {
+            startAutoClicker();
+        }
     }
 
     // --- NEW: Method to handle buy amount selection ---
@@ -614,6 +721,15 @@ public class MainActivity extends AppCompatActivity {
 
         btnSupernova.setVisibility(stardustCount.compareTo(supernovaCost) >= 0 ? View.VISIBLE : View.GONE);
         btnBigCrunch.setVisibility(singularityCount >= BIG_CRUNCH_COST ? View.VISIBLE : View.GONE);
+        
+        // --- NEW: Auto-Clicker Button Update ---
+        if (autoClickerLevel == 0) {
+            btnAutoClicker.setText(String.format("AUTO (%s)", formatBigNumber(getAutoClickerCost())));
+            btnAutoClicker.setEnabled(stardustCount.compareTo(getAutoClickerCost()) >= 0);
+        } else {
+            btnAutoClicker.setText(String.format("LV%d (%s)", autoClickerLevel, formatBigNumber(getAutoClickerCost())));
+            btnAutoClicker.setEnabled(stardustCount.compareTo(getAutoClickerCost()) >= 0);
+        }
     }
 
     // --- Number Formatting ---
@@ -831,6 +947,7 @@ public class MainActivity extends AppCompatActivity {
             BigInteger reward = BigInteger.valueOf(250).add(BigInteger.valueOf(totalSps * 15));
             stardustCount = stardustCount.add(reward);
             totalStardustEverEarned = totalStardustEverEarned.add(reward);
+            totalRiftsTapped++; // NEW: Track rifts tapped
             Toast.makeText(this, "Rift Tapped! +" + formatBigNumber(reward) + " Stardust!", Toast.LENGTH_SHORT).show();
             playRiftSound();
             explodeParticles(rift.getX() + riftSize / 2f, rift.getY() + riftSize / 2f);
@@ -879,6 +996,26 @@ public class MainActivity extends AppCompatActivity {
                     case TOTAL_STARDUST: if (totalStardustEverEarned.compareTo(BigInteger.valueOf(achievement.getGoal())) >= 0) newlyUnlocked = true; break;
                     case UPGRADE_COUNT: int index = achievement.getTargetUpgradeIndex(); if (index >= 0 && index < upgrades.size() && upgrades.get(index).count >= achievement.getGoal()) newlyUnlocked = true; break;
                     case REACH_SPS: if (totalSps >= achievement.getGoal()) newlyUnlocked = true; break;
+                    case SINGULARITY_COUNT: if (singularityCount >= achievement.getGoal()) newlyUnlocked = true; break;
+                    case RESEARCH_COUNT: 
+                        int researchCount = 0;
+                        for (ResearchUpgrade research : researchUpgrades) {
+                            if (research.isPurchased()) researchCount++;
+                        }
+                        if (researchCount >= achievement.getGoal()) newlyUnlocked = true; 
+                        break;
+                    case ESSENCE_COUNT: if (cosmicEssence >= achievement.getGoal()) newlyUnlocked = true; break;
+                    
+                    // --- NEW: Auto-Clicker and Mastery Achievement Types ---
+                    case AUTO_CLICKER_LEVEL: if (autoClickerLevel >= achievement.getGoal()) newlyUnlocked = true; break;
+                    case MASTERY_COUNT:
+                        int maxMasteryLevel = 0;
+                        for (Mastery mastery : masteries) {
+                            maxMasteryLevel = Math.max(maxMasteryLevel, mastery.getLevel());
+                        }
+                        if (maxMasteryLevel >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case RIFTS_TAPPED: if (totalRiftsTapped >= achievement.getGoal()) newlyUnlocked = true; break;
                 }
                 if (newlyUnlocked) unlockAchievement(achievement);
             }
@@ -1078,13 +1215,95 @@ public class MainActivity extends AppCompatActivity {
     private void showSettingsDialog() {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_settings, null);
-        SwitchMaterial switchSound = dialogView.findViewById(R.id.switchSound);
-        switchSound.setChecked(soundEnabled);
-        switchSound.setOnCheckedChangeListener((buttonView, isChecked) -> soundEnabled = isChecked);
+        
+        SwitchMaterial soundSwitch = dialogView.findViewById(R.id.switchSound);
+        Button btnStatistics = dialogView.findViewById(R.id.btnStatistics);
+        
+        soundSwitch.setChecked(soundEnabled);
+        soundSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> soundEnabled = isChecked);
+        
+        btnStatistics.setOnClickListener(v -> showStatisticsDialog());
+        
         builder.setView(dialogView)
+                .setTitle("Settings")
                 .setPositiveButton("Close", (dialog, which) -> dialog.dismiss())
                 .show();
     }
+
+    // --- NEW: Statistics Dialog ---
+    private void showStatisticsDialog() {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_statistics, null);
+        
+        // General Stats
+        TextView tvTotalClicks = dialogView.findViewById(R.id.tvTotalClicks);
+        TextView tvTotalStardust = dialogView.findViewById(R.id.tvTotalStardust);
+        TextView tvCurrentSps = dialogView.findViewById(R.id.tvCurrentSps);
+        TextView tvPlayTime = dialogView.findViewById(R.id.tvPlayTime);
+        
+        // Prestige Stats
+        TextView tvSingularities = dialogView.findViewById(R.id.tvSingularities);
+        TextView tvCosmicEssence = dialogView.findViewById(R.id.tvCosmicEssence);
+        TextView tvSupernovas = dialogView.findViewById(R.id.tvSupernovas);
+        TextView tvBigCrunches = dialogView.findViewById(R.id.tvBigCrunches);
+        
+        // Automation Stats
+        TextView tvAutoClickerLevel = dialogView.findViewById(R.id.tvAutoClickerLevel);
+        TextView tvTotalUpgrades = dialogView.findViewById(R.id.tvTotalUpgrades);
+        TextView tvResearchCompleted = dialogView.findViewById(R.id.tvResearchCompleted);
+        TextView tvSkillPoints = dialogView.findViewById(R.id.tvSkillPoints);
+        
+        // Achievement Stats
+        TextView tvAchievementsUnlocked = dialogView.findViewById(R.id.tvAchievementsUnlocked);
+        ProgressBar progressAchievements = dialogView.findViewById(R.id.progressAchievements);
+        TextView tvRiftsTapped = dialogView.findViewById(R.id.tvRiftsTapped);
+        
+        // Calculate values
+        long playTimeHours = gameStartTime > 0 ? (System.currentTimeMillis() - gameStartTime) / (1000 * 60 * 60) : 0;
+        int totalUpgradeCount = 0;
+        for (Upgrade upgrade : upgrades) {
+            totalUpgradeCount += upgrade.count;
+        }
+        int researchCompleted = 0;
+        for (ResearchUpgrade research : researchUpgrades) {
+            if (research.isPurchased()) researchCompleted++;
+        }
+        int totalSkillPoints = 0;
+        for (Skill skill : skills) {
+            totalSkillPoints += skill.getCurrentLevel();
+        }
+        int achievementsUnlocked = 0;
+        for (Achievement achievement : achievements) {
+            if (achievement.isUnlocked()) achievementsUnlocked++;
+        }
+        int achievementPercent = (achievementsUnlocked * 100) / achievements.size();
+        
+        // Set values
+        tvTotalClicks.setText(String.format("Total Clicks: %,d", totalClicks));
+        tvTotalStardust.setText(String.format("Total Stardust Earned: %s", formatBigNumber(totalStardustEverEarned)));
+        tvCurrentSps.setText(String.format("Current SPS: %s", formatBigNumber(BigInteger.valueOf(totalSps))));
+        tvPlayTime.setText(String.format("Play Time: %d hours", playTimeHours));
+        
+        tvSingularities.setText(String.format("Singularities: %d", singularityCount));
+        tvCosmicEssence.setText(String.format("Cosmic Essence: %d", cosmicEssence));
+        tvSupernovas.setText(String.format("Total Supernovas: %d", totalSupernovas));
+        tvBigCrunches.setText(String.format("Total Big Crunches: %d", totalBigCrunches));
+        
+        tvAutoClickerLevel.setText(String.format("Auto-Clicker Level: %d", autoClickerLevel));
+        tvTotalUpgrades.setText(String.format("Total Upgrades Owned: %,d", totalUpgradeCount));
+        tvResearchCompleted.setText(String.format("Research Completed: %d/%d", researchCompleted, researchUpgrades.size()));
+        tvSkillPoints.setText(String.format("Total Skill Points Spent: %d", totalSkillPoints));
+        
+        tvAchievementsUnlocked.setText(String.format("Achievements Unlocked: %d/%d", achievementsUnlocked, achievements.size()));
+        progressAchievements.setProgress(achievementPercent);
+        tvRiftsTapped.setText(String.format("Cosmic Rifts Tapped: %d", totalRiftsTapped));
+        
+        builder.setView(dialogView)
+                .setTitle("Game Statistics")
+                .setPositiveButton("Close", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
     private void startAutoSave() {
         autoSaveRunnable = new Runnable() {
             @Override
@@ -1094,5 +1313,140 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         autoSaveHandler.postDelayed(autoSaveRunnable, 10000);
+    }
+
+    // --- NEW: Auto-Clicker Methods ---
+    private void startAutoClicker() {
+        if (autoClickerLevel > 0 && !autoClickerActive) {
+            autoClickerActive = true;
+            autoClickRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (autoClickerActive && autoClickerLevel > 0) {
+                        performAutoClick();
+                        // Auto-click every 3 seconds, reduced by 0.2s per level (minimum 1s)
+                        int delay = Math.max(1000, 3000 - (autoClickerLevel * 200));
+                        autoClickHandler.postDelayed(this, delay);
+                    }
+                }
+            };
+            autoClickHandler.post(autoClickRunnable);
+        }
+    }
+
+    private void stopAutoClicker() {
+        autoClickerActive = false;
+        if (autoClickRunnable != null) {
+            autoClickHandler.removeCallbacks(autoClickRunnable);
+        }
+    }
+
+    private void performAutoClick() {
+        // Simulate a click but with visual feedback
+        BigInteger clickValue = BigInteger.ONE;
+        clickValue = clickValue.add(BigInteger.valueOf(getSkillLevel("click_1")));
+        if (getResearch("research_click_sps").isPurchased()) {
+            clickValue = clickValue.add(BigInteger.valueOf(totalSps / 100));
+        }
+        
+        // Auto-clicker gets efficiency bonus
+        BigDecimal efficiency = BigDecimal.valueOf(1.0 + (autoClickerLevel * 0.1));
+        clickValue = new BigDecimal(clickValue).multiply(efficiency).toBigInteger();
+        
+        stardustCount = stardustCount.add(clickValue);
+        totalStardustEverEarned = totalStardustEverEarned.add(clickValue);
+        
+        // Visual feedback for auto-click
+        showStardustPopup(clickValue, btnClickStar);
+        animateAutoClick();
+        
+        updateUI();
+        checkAchievements();
+    }
+
+    private void animateAutoClick() {
+        // Subtle animation for auto-clicks
+        ObjectAnimator scaleX = ObjectAnimator.ofFloat(btnClickStar, "scaleX", 1f, 1.1f, 1f);
+        ObjectAnimator scaleY = ObjectAnimator.ofFloat(btnClickStar, "scaleY", 1f, 1.1f, 1f);
+        AnimatorSet animatorSet = new AnimatorSet();
+        animatorSet.playTogether(scaleX, scaleY);
+        animatorSet.setDuration(200);
+        animatorSet.start();
+    }
+
+    private BigInteger getAutoClickerCost() {
+        return BigInteger.valueOf(AUTO_CLICKER_BASE_COST).multiply(
+            BigInteger.valueOf((long) Math.pow(2, autoClickerLevel))
+        );
+    }
+
+    private void upgradeAutoClicker() {
+        BigInteger cost = getAutoClickerCost();
+        if (stardustCount.compareTo(cost) >= 0) {
+            stardustCount = stardustCount.subtract(cost);
+            autoClickerLevel++;
+            
+            if (autoClickerLevel == 1) {
+                startAutoClicker();
+                Toast.makeText(this, "Auto-Clicker Activated!", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Auto-Clicker Level " + autoClickerLevel + "!", Toast.LENGTH_SHORT).show();
+            }
+            
+            updateUI();
+            playUpgradeSound();
+        } else {
+            Toast.makeText(this, "Not enough stardust for Auto-Clicker!", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // --- NEW: Enhanced Particle Effects ---
+    private void createEnhancedClickParticles(float x, float y, BigInteger value) {
+        int particleCount = Math.min(20, Math.max(5, value.toString().length() / 2));
+        
+        for (int i = 0; i < particleCount; i++) {
+            final ImageView particle = new ImageView(this);
+            
+            // Choose particle type based on value magnitude
+            if (value.compareTo(BigInteger.valueOf(1000000)) >= 0) {
+                particle.setImageResource(R.drawable.ic_star_shower); // Gold particles for big values
+            } else if (value.compareTo(BigInteger.valueOf(1000)) >= 0) {
+                particle.setImageResource(R.drawable.ic_cosmic_rift); // Blue particles for medium values
+            } else {
+                particle.setImageResource(R.drawable.ic_stardust_particle); // Regular particles for small values
+            }
+            
+            int size = 15 + random.nextInt(25);
+            particle.setLayoutParams(new ViewGroup.LayoutParams(size, size));
+            particle.setX(x - size/2f + (random.nextFloat() - 0.5f) * 100);
+            particle.setY(y - size/2f + (random.nextFloat() - 0.5f) * 100);
+            particle.setAlpha(0.8f);
+            rootLayout.addView(particle);
+            
+            // Enhanced animation with rotation and scaling
+            float endX = x + (random.nextFloat() - 0.5f) * 600;
+            float endY = y + (random.nextFloat() - 0.5f) * 600;
+            float rotation = random.nextFloat() * 720f - 360f;
+            
+            ObjectAnimator animator = ObjectAnimator.ofPropertyValuesHolder(particle,
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, endX),
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, endY),
+                    PropertyValuesHolder.ofFloat(View.ALPHA, 0f),
+                    PropertyValuesHolder.ofFloat(View.ROTATION, rotation),
+                    PropertyValuesHolder.ofFloat(View.SCALE_X, 0.5f),
+                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.5f)
+            );
+            animator.setDuration(1200 + random.nextInt(800));
+            animator.setInterpolator(new DecelerateInterpolator());
+            animator.addListener(new AnimatorListenerAdapter() {
+                @Override 
+                public void onAnimationEnd(Animator animation) { 
+                    if (particle.getParent() != null) {
+                        rootLayout.removeView(particle); 
+                    }
+                }
+            });
+            animator.start();
+        }
     }
 }

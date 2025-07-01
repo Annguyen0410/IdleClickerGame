@@ -201,6 +201,19 @@
         app:layout_constraintStart_toStartOf="parent">
         <!-- Buttons remain the same -->
         <Button
+            android:id="@+id/btnAutoClicker"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="60dp"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/accent_cyan"
+            android:padding="8dp"
+            android:text="AUTO"
+            android:textColor="@color/app_background"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="4dp"/>
+        <Button
             android:id="@+id/btnSkillTree"
             style="@style/Widget.AppCompat.Button.Borderless"
             android:layout_width="wrap_content"
@@ -211,7 +224,8 @@
             android:text="Skills"
             android:textColor="@color/app_background"
             android:textSize="16sp"
-            android:textStyle="bold"/>
+            android:textStyle="bold"
+            android:layout_marginEnd="4dp"/>
         <Button
             android:id="@+id/btnShootingStar"
             style="@style/Widget.AppCompat.Button.Borderless"
