@@ -83,4 +83,9 @@ public class Upgrade {
 
         return totalCost.toBigInteger();
     }
+
+    // Getter for base cost
+    public BigInteger getBaseCost() {
+        return baseCost;
+    }
 }
