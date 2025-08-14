@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="4dp"
+    app:cardBackgroundColor="@color/panel_background"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp">
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+        
+        <TextView
+            android:id="@+id/tvConstellationName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Constellation Name"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/star_color"/>
+            
+        <TextView
+            android:id="@+id/tvConstellationDesc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Description"
+            android:textSize="14sp"
+            android:textColor="@color/text_color_secondary"
+            android:layout_marginTop="4dp"/>
+            
+        <Button
+            android:id="@+id/btnActivateConstellation"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="8dp"
+            android:text="UNLOCK"
+            android:textSize="14sp"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/star_color"
+            android:textColor="@color/white"/>
+            
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
