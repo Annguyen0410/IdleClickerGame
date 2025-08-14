@@ -8,22 +8,7 @@
     android:background="@drawable/background_main"
     tools:context=".MainActivity">
 
-    <!-- Top row of buttons -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/btnAchievements"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:contentDescription="Achievements"
-        android:src="@drawable/ic_achievement_unlocked"
-        app:backgroundTint="@color/panel_background"
-        app:tint="@color/accent_gold"
-        app:layout_constraintEnd_toStartOf="@id/btnSettings"
-        app:layout_constraintTop_toTopOf="@id/btnSettings"
-        app:layout_constraintBottom_toBottomOf="@id/btnSettings"
-        app:elevation="8dp"
-        app:borderWidth="0dp"/>
-
+    <!-- Top row of buttons - positioned vertically to avoid overlap -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnSettings"
         android:layout_width="wrap_content"
@@ -38,6 +23,36 @@
         app:elevation="8dp"
         app:borderWidth="0dp"/>
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnAchievements"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
+        android:contentDescription="Achievements"
+        android:src="@drawable/ic_achievement_unlocked"
+        app:backgroundTint="@color/panel_background"
+        app:tint="@color/accent_gold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnSettings"
+        app:elevation="8dp"
+        app:borderWidth="0dp"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnStatistics"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
+        android:contentDescription="Statistics"
+        android:src="@android:drawable/ic_menu_sort_by_size"
+        app:backgroundTint="@color/panel_background"
+        app:tint="@color/accent_cyan"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnAchievements"
+        app:elevation="8dp"
+        app:borderWidth="0dp"/>
+
     <!-- Stats Card -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardStats"
@@ -45,7 +60,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="80dp"
         app:cardBackgroundColor="@color/panel_background_transparent"
         app:cardCornerRadius="20dp"
         app:cardElevation="0dp"
@@ -81,6 +96,16 @@
                 android:textColor="@color/star_color"
                 android:textSize="14sp"
                 android:textStyle="italic" />
+            <TextView
+                android:id="@+id/tvEventStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/accent_cyan"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:layout_marginTop="4dp" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
@@ -148,6 +173,32 @@
             android:textColor="@color/white"
             android:background="@drawable/modern_button_background"
             android:alpha="0.5"/>
+
+        <Button
+            android:id="@+id/btnBuy50"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:minWidth="64dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:text="x50"
+            android:textColor="@color/white"
+            android:background="@drawable/modern_button_background"
+            android:alpha="0.5"
+            android:visibility="gone"/>
+
+        <Button
+            android:id="@+id/btnBuy100"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:minWidth="64dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:text="x100"
+            android:textColor="@color/white"
+            android:background="@drawable/modern_button_background"
+            android:alpha="0.5"
+            android:visibility="gone"/>
 
     </LinearLayout>
 
@@ -234,6 +285,21 @@
             android:backgroundTint="@color/supernova_button_color"
             android:text="SUPERNOVA"
             android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:layout_marginStart="8dp"/>
+        <!-- NEW: Galaxy Collapse Button -->
+        <Button
+            android:id="@+id/btnGalaxyCollapse"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/accent_gold"
+            android:text="GALAXY"
+            android:textColor="@color/app_background"
             android:textSize="16sp"
             android:textStyle="bold"
             android:visibility="gone"

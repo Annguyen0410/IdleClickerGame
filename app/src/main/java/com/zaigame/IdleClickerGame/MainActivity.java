@@ -8,6 +8,7 @@ import android.animation.PropertyValuesHolder;
 import androidx.appcompat.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.media.AudioAttributes;
 import android.media.SoundPool;
 import android.os.Bundle;
@@ -46,10 +47,10 @@ import java.util.Random;
 public class MainActivity extends AppCompatActivity {
 
     // --- UI Elements ---
-    private TextView tvStardustCount, tvSps, tvSingularityCount;
-    private FloatingActionButton btnClickStar, btnSettings, btnAchievements;
-    private Button btnSupernova, btnShootingStar, btnSkillTree, btnBigCrunch; // MODIFIED: Added btnBigCrunch
-    private Button btnBuy1, btnBuy10, btnBuy25; // NEW: Buy amount buttons
+    private TextView tvStardustCount, tvSps, tvSingularityCount, tvEventStatus;
+    private FloatingActionButton btnClickStar, btnSettings, btnAchievements, btnStatistics;
+    private Button btnSupernova, btnShootingStar, btnSkillTree, btnBigCrunch, btnGalaxyCollapse; // MODIFIED: Added buttons
+    private Button btnBuy1, btnBuy10, btnBuy25, btnBuy50, btnBuy100; // NEW: Buy amount buttons
     private LinearLayout llUpgradesContainer;
     private ConstraintLayout rootLayout;
     private TabLayout tabLayout;
@@ -69,6 +70,10 @@ public class MainActivity extends AppCompatActivity {
     private final double singularityBonus = 0.05;
     private final BigInteger supernovaCost = new BigInteger("1000000000000");
 
+    // --- NEW: Galaxy Collapse Variables ---
+    private int galaxyPoints = 0;
+    private final BigInteger GALAXY_COLLAPSE_COST = new BigInteger("1000000000000000000"); // 1 Quintillion stardust
+    
     // --- NEW: Big Crunch Variables ---
     private int cosmicEssence = 0;
     private final int BIG_CRUNCH_COST = 10000; // Cost in Singularities
@@ -76,6 +81,13 @@ public class MainActivity extends AppCompatActivity {
     // --- Feature: Shooting Star Boost ---
     private boolean isBoostActive = false;
     private int boostMultiplier = 1;
+    
+    // --- NEW: Special Events System ---
+    private boolean isEventActive = false;
+    private String currentEventType = "";
+    private long eventEndTime = 0;
+    private Handler eventHandler = new Handler();
+    private Runnable eventSpawnerRunnable;
 
     // --- Game Data Lists ---
     private final List<Upgrade> upgrades = new ArrayList<>();
@@ -90,6 +102,10 @@ public class MainActivity extends AppCompatActivity {
     private Runnable riftSpawnerRunnable;
     private Handler autoSaveHandler = new Handler();
     private Runnable autoSaveRunnable;
+    private Handler autoClickHandler = new Handler();
+    private Runnable autoClickRunnable;
+    private Handler autoBuyHandler = new Handler();
+    private Runnable autoBuyRunnable;
 
     // --- Other Game State ---
     private int currentBuyAmount = 1; // NEW: To track buy amount (1, 10, or 25)
@@ -97,17 +113,46 @@ public class MainActivity extends AppCompatActivity {
     private long totalClicks = 0;
     private BigInteger totalStardustEverEarned = BigInteger.ZERO;
     private boolean soundEnabled = true;
+    
+    // --- Performance Optimization ---
+    private int frameSkipCounter = 0;
+    private final int FRAME_SKIP_INTERVAL = 3; // Update UI every 3rd frame when possible
+    private boolean isInBackground = false;
+    
+    // --- NEW: Statistics Tracking ---
+    private long gameStartTime = System.currentTimeMillis();
+    private long totalTimePlayed = 0;
+    private long sessionStartTime = System.currentTimeMillis();
+    private int totalPrestigeCount = 0;
+    private int totalGalaxyCollapseCount = 0;
+    private int totalBigCrunchCount = 0;
+    private BigInteger highestStardustReached = BigInteger.ZERO;
+    private long bestSpsAchieved = 0;
+    private long totalUpgradesPurchased = 0;
+    private int totalResearchPurchased = 0;
+    private final Map<String, Integer> eventsSeen = new HashMap<>();
+    private long averageClicksPerSecond = 0;
+    private BigInteger totalStardustFromClicks = BigInteger.ZERO;
+    private BigInteger totalStardustFromProduction = BigInteger.ZERO;
 
     private SharedPreferences prefs;
 
     // --- Sound Effects ---
     private SoundPool soundPool;
     private int clickSoundId, upgradeSoundId, milestoneSoundId, achievementSoundId, riftSoundId;
+    private int buttonSoundId, notificationSoundId, skillUnlockSoundId;
+    
+    // --- Background Music ---
+    private android.media.MediaPlayer backgroundMusic;
+    private boolean musicEnabled = true;
+    private float musicVolume = 0.5f;
+    private float soundVolume = 1.0f;
 
     // --- SharedPreferences Keys ---
     private static final String PREFS_NAME = "CosmicClickerPrefs";
     private static final String KEY_STARDUST = "stardustCount";
     private static final String KEY_SINGULARITY = "singularityCount";
+    private static final String KEY_GALAXY_POINTS = "galaxyPoints"; // NEW
     private static final String KEY_COSMIC_ESSENCE = "cosmicEssence"; // NEW
     private static final String KEY_UPGRADE_COUNT_PREFIX = "upgrade_count_";
     private static final String KEY_RESEARCH_PREFIX = "research_";
@@ -118,6 +163,23 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_TOTAL_CLICKS = "totalClicks";
     private static final String KEY_TOTAL_STARDUST_EARNED = "totalStardustEarned";
     private static final long DAILY_REWARD_AMOUNT = 1000000000;
+    
+    // --- NEW: Statistics Save Keys ---
+    private static final String KEY_TOTAL_TIME_PLAYED = "totalTimePlayed";
+    private static final String KEY_TOTAL_PRESTIGE_COUNT = "totalPrestigeCount";
+    private static final String KEY_TOTAL_GALAXY_COUNT = "totalGalaxyCount";
+    private static final String KEY_TOTAL_BIG_CRUNCH_COUNT = "totalBigCrunchCount";
+    private static final String KEY_HIGHEST_STARDUST = "highestStardust";
+    private static final String KEY_BEST_SPS = "bestSps";
+    private static final String KEY_TOTAL_UPGRADES_PURCHASED = "totalUpgradesPurchased";
+    private static final String KEY_TOTAL_RESEARCH_PURCHASED = "totalResearchPurchased";
+    private static final String KEY_EVENTS_SEEN_PREFIX = "eventsSeen_";
+    private static final String KEY_STARDUST_FROM_CLICKS = "stardustFromClicks";
+    private static final String KEY_STARDUST_FROM_PRODUCTION = "stardustFromProduction";
+    private static final String KEY_SOUND_ENABLED = "soundEnabled";
+    private static final String KEY_MUSIC_ENABLED = "musicEnabled";
+    private static final String KEY_MUSIC_VOLUME = "musicVolume";
+    private static final String KEY_SOUND_VOLUME = "soundVolume";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,6 +201,8 @@ public class MainActivity extends AppCompatActivity {
 
         startGameLoop();
         startAutoSave();
+        startAutomation();
+        startEventSpawner();
 
         rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(
                 new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -154,20 +218,29 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        isInBackground = true;
+        pauseBackgroundMusic();
         saveGame();
         gameLoopHandler.removeCallbacksAndMessages(null);
         riftHandler.removeCallbacks(riftSpawnerRunnable);
         twinkleHandler.removeCallbacksAndMessages(null);
         autoSaveHandler.removeCallbacks(autoSaveRunnable);
+        autoClickHandler.removeCallbacks(autoClickRunnable);
+        autoBuyHandler.removeCallbacks(autoBuyRunnable);
+        eventHandler.removeCallbacks(eventSpawnerRunnable);
     }
     @Override
     protected void onResume() {
         super.onResume();
+        isInBackground = false;
+        startBackgroundMusic();
         calculateOfflineProgress();
         checkDailyReward();
         startGameLoop();
         startRiftSpawner();
         startAutoSave();
+        startAutomation();
+        startEventSpawner();
         createTwinklingStars(15);
     }
     @Override
@@ -177,9 +250,16 @@ public class MainActivity extends AppCompatActivity {
         riftHandler.removeCallbacks(riftSpawnerRunnable);
         twinkleHandler.removeCallbacksAndMessages(null);
         autoSaveHandler.removeCallbacks(autoSaveRunnable);
+        autoClickHandler.removeCallbacks(autoClickRunnable);
+        autoBuyHandler.removeCallbacks(autoBuyRunnable);
+        eventHandler.removeCallbacks(eventSpawnerRunnable);
         if (soundPool != null) {
             soundPool.release();
             soundPool = null;
+        }
+        if (backgroundMusic != null) {
+            backgroundMusic.release();
+            backgroundMusic = null;
         }
     }
 
@@ -189,13 +269,16 @@ public class MainActivity extends AppCompatActivity {
         tvStardustCount = findViewById(R.id.tvStardustCount);
         tvSps = findViewById(R.id.tvSps);
         tvSingularityCount = findViewById(R.id.tvSingularityCount);
+        tvEventStatus = findViewById(R.id.tvEventStatus);
         btnClickStar = findViewById(R.id.btnClickStar);
         btnSettings = findViewById(R.id.btnSettings);
         btnAchievements = findViewById(R.id.btnAchievements);
+        btnStatistics = findViewById(R.id.btnStatistics);
         btnSkillTree = findViewById(R.id.btnSkillTree);
         btnSupernova = findViewById(R.id.btnSupernova);
         btnShootingStar = findViewById(R.id.btnShootingStar);
         btnBigCrunch = findViewById(R.id.btnBigCrunch); // NEW
+        btnGalaxyCollapse = findViewById(R.id.btnGalaxyCollapse); // NEW
         llUpgradesContainer = findViewById(R.id.llUpgradesContainer);
         tabLayout = findViewById(R.id.tabLayout);
 
@@ -203,20 +286,26 @@ public class MainActivity extends AppCompatActivity {
         btnBuy1 = findViewById(R.id.btnBuy1);
         btnBuy10 = findViewById(R.id.btnBuy10);
         btnBuy25 = findViewById(R.id.btnBuy25);
+        btnBuy50 = findViewById(R.id.btnBuy50);
+        btnBuy100 = findViewById(R.id.btnBuy100);
     }
     private void setupClickListeners() {
         btnClickStar.setOnClickListener(v -> onStarClicked());
-        btnSupernova.setOnClickListener(v -> triggerSupernova());
-        btnShootingStar.setOnClickListener(v -> activateShootingStar());
-        btnSettings.setOnClickListener(v -> showSettingsDialog());
-        btnAchievements.setOnClickListener(v -> showAchievementsDialog());
-        btnSkillTree.setOnClickListener(v -> showSkillTreeDialog());
-        btnBigCrunch.setOnClickListener(v -> triggerBigCrunch()); // NEW
+        btnSupernova.setOnClickListener(v -> { playButtonSound(); triggerSupernova(); });
+        btnShootingStar.setOnClickListener(v -> { playButtonSound(); activateShootingStar(); });
+        btnSettings.setOnClickListener(v -> { playButtonSound(); showSettingsDialog(); });
+        btnAchievements.setOnClickListener(v -> { playButtonSound(); showAchievementsDialog(); });
+        btnStatistics.setOnClickListener(v -> { playButtonSound(); showStatisticsDialog(); });
+        btnSkillTree.setOnClickListener(v -> { playButtonSound(); showSkillTreeDialog(); });
+        btnBigCrunch.setOnClickListener(v -> { playButtonSound(); triggerBigCrunch(); }); // NEW
+        btnGalaxyCollapse.setOnClickListener(v -> { playButtonSound(); triggerGalaxyCollapse(); }); // NEW
 
         // --- NEW: Listeners for buy amount toggles ---
-        btnBuy1.setOnClickListener(v -> setBuyAmount(1));
-        btnBuy10.setOnClickListener(v -> setBuyAmount(10));
-        btnBuy25.setOnClickListener(v -> setBuyAmount(25));
+        btnBuy1.setOnClickListener(v -> { playButtonSound(); setBuyAmount(1); });
+        btnBuy10.setOnClickListener(v -> { playButtonSound(); setBuyAmount(10); });
+        btnBuy25.setOnClickListener(v -> { playButtonSound(); setBuyAmount(25); });
+        btnBuy50.setOnClickListener(v -> { playButtonSound(); setBuyAmount(50); });
+        btnBuy100.setOnClickListener(v -> { playButtonSound(); setBuyAmount(100); });
     }
     private void setupTabs() {
         tabLayout.addTab(tabLayout.newTab().setText("Celestial Objects"));
@@ -232,6 +321,7 @@ public class MainActivity extends AppCompatActivity {
     }
     private void setupUpgrades() {
         upgrades.clear();
+        // Early Game - Better balanced progression
         upgrades.add(new Upgrade("Asteroid Catcher", new BigInteger("15"), 1));
         upgrades.add(new Upgrade("Comet Collector", new BigInteger("100"), 8));
         upgrades.add(new Upgrade("Gas Giant Siphon", new BigInteger("1100"), 47));
@@ -242,23 +332,37 @@ public class MainActivity extends AppCompatActivity {
         upgrades.add(new Upgrade("Star Cluster", new BigInteger("330000000"), 260000));
         upgrades.add(new Upgrade("Galactic Filament", new BigInteger("5100000000"), 1600000));
         upgrades.add(new Upgrade("Supercluster Lens", new BigInteger("75000000000"), 10000000));
+        
+        // Mid Game - Smoother scaling
         upgrades.add(new Upgrade("Cosmic Web Weaver", new BigInteger("1100000000000"), 65000000));
         upgrades.add(new Upgrade("Reality Catalyst", new BigInteger("210000000000000"), 450000000));
-
-        // --- NEW ENDGAME UPGRADES ---
-        upgrades.add(new Upgrade("Dimension Forge", new BigInteger("54000000000000000"), 3600000000L)); // 5.4e16
-        upgrades.add(new Upgrade("Time-Space Anomaly", new BigInteger("8800000000000000000"), 250000000000L)); // 8.8e18
-        upgrades.add(new Upgrade("Omniverse Core", new BigInteger("13000000000000000000000"), 19000000000000L)); // 1.3e22
+        upgrades.add(new Upgrade("Quantum Synthesizer", new BigInteger("3800000000000000"), 3200000000L));
+        upgrades.add(new Upgrade("Multiverse Gateway", new BigInteger("62000000000000000"), 24000000000L));
+        
+        // Late Game - Endgame content
+        upgrades.add(new Upgrade("Dimension Forge", new BigInteger("920000000000000000"), 180000000000L));
+        upgrades.add(new Upgrade("Time-Space Anomaly", new BigInteger("14000000000000000000"), 1400000000000L));
+        upgrades.add(new Upgrade("Omniverse Core", new BigInteger("210000000000000000000"), 11000000000000L));
+        upgrades.add(new Upgrade("Infinity Engine", new BigInteger("3100000000000000000000"), 84000000000000L));
+        upgrades.add(new Upgrade("Eternity Weaver", new BigInteger("46000000000000000000000"), 620000000000000L));
+        upgrades.add(new Upgrade("Absolute Zero", new BigInteger("680000000000000000000000"), 4600000000000000L));
     }
     private void setupResearchUpgrades() {
         researchUpgrades.clear();
+        // Early Game Research
         researchUpgrades.add(new ResearchUpgrade("research_click_sps", "Stardust Infusion", "Each click also generates 1% of your SPS.", new BigInteger("50000")));
         researchUpgrades.add(new ResearchUpgrade("research_sps_boost", "Advanced Lensing", "All Celestial Objects produce 10% more Stardust.", new BigInteger("250000")));
+        researchUpgrades.add(new ResearchUpgrade("research_auto_click", "Cosmic Automation", "Automatically clicks the star every 5 seconds.", new BigInteger("5000000")));
+        
+        // Mid Game Research
         researchUpgrades.add(new ResearchUpgrade("research_milestone", "Harmonic Resonance", "Milestone bonuses are 25% more effective (x2.5 instead of x2).", new BigInteger("100000000")));
         researchUpgrades.add(new ResearchUpgrade("research_cheaper", "Cosmic Bargaining", "All upgrades and research are 5% cheaper.", new BigInteger("50000000000")));
-
-        // --- NEW RESEARCH ---
-        researchUpgrades.add(new ResearchUpgrade("research_rift_doubler", "Rift Stabilization", "Cosmic Rift rewards are permanently doubled.", new BigInteger("1000000000000000"))); // 1 Quadrillion
+        researchUpgrades.add(new ResearchUpgrade("research_bulk_buy", "Quantum Commerce", "Unlock x50 and x100 bulk buy options.", new BigInteger("500000000000")));
+        
+        // Late Game Research
+        researchUpgrades.add(new ResearchUpgrade("research_rift_doubler", "Rift Stabilization", "Cosmic Rift rewards are permanently doubled.", new BigInteger("1000000000000000")));
+        researchUpgrades.add(new ResearchUpgrade("research_auto_buy", "Neural Networks", "Automatically purchases the cheapest available upgrade every 10 seconds.", new BigInteger("50000000000000000")));
+        researchUpgrades.add(new ResearchUpgrade("research_critical_mass", "Critical Mass Theory", "All production buildings gain +50% effectiveness.", new BigInteger("2000000000000000000")));
     }
     private void setupAchievements() {
         achievements.clear();
@@ -274,7 +378,15 @@ public class MainActivity extends AppCompatActivity {
         achievements.add(new Achievement("supernova_1", "Star-Breaker", "Perform your first Supernova.", AchievementType.SINGULARITY_COUNT, 1));
         achievements.add(new Achievement("research_1", "A New Age", "Purchase your first Research upgrade.", AchievementType.RESEARCH_COUNT, 1));
         achievements.add(new Achievement("essence_1", "The Beginning is the End", "Initiate your first Big Crunch.", AchievementType.ESSENCE_COUNT, 1));
-        achievements.add(new Achievement("forge_1", "Dimensional Engineer", "Build a Dimension Forge.", AchievementType.UPGRADE_COUNT, 1, 12)); // Index 12 is Dimension Forge
+        achievements.add(new Achievement("forge_1", "Dimensional Engineer", "Build a Dimension Forge.", AchievementType.UPGRADE_COUNT, 1, 14)); // Index 14 is Dimension Forge
+        achievements.add(new Achievement("click_1000", "Dedicated Clicker", "Click the star 1,000 times", AchievementType.TOTAL_CLICKS, 1000));
+        achievements.add(new Achievement("stardust_1b", "Stardust Billionaire", "Earn 1 billion total stardust", AchievementType.TOTAL_STARDUST, 1000000000));
+        achievements.add(new Achievement("automation_master", "Automation Master", "Unlock both auto-click and auto-buy research", AchievementType.RESEARCH_COUNT, 8));
+        achievements.add(new Achievement("infinity_1", "Infinite Power", "Build an Infinity Engine.", AchievementType.UPGRADE_COUNT, 1, 17)); // Index 17 is Infinity Engine
+        achievements.add(new Achievement("galaxy_1", "Galaxy Destroyer", "Perform your first Galaxy Collapse.", AchievementType.GALAXY_COUNT, 1));
+        achievements.add(new Achievement("skill_master", "Skill Master", "Max out any skill tree path.", AchievementType.RESEARCH_COUNT, 15));
+        achievements.add(new Achievement("ultimate_clicker", "Ultimate Clicker", "Reach 1 Trillion SPS.", AchievementType.REACH_SPS, 1000000000000L));
+        achievements.add(new Achievement("event_seeker", "Event Seeker", "Experience all 4 event types.", AchievementType.TOTAL_CLICKS, 10000));
     }
     private void setupSkills() {
         skills.clear();
@@ -293,6 +405,11 @@ public class MainActivity extends AppCompatActivity {
         // --- Path of the Scholar (Prestige) ---
         skills.add(new Skill("sing_1", "Supernova Insight", "+2% Singularities earned per level.", SkillType.SINGULARITY_BOOST, 10, 3, null));
         skills.add(new Skill("sing_2", "Singularity Attunement", "Singularity SPS bonus is +1% stronger per level.", SkillType.SINGULARITY_BOOST, 5, 50, "sing_1"));
+        
+        // --- NEW: Path of the Innovator (Research & Efficiency) ---
+        skills.add(new Skill("research_1", "Cosmic Research", "Research upgrades are 5% cheaper per level.", SkillType.RESEARCH_COST_REDUCTION, 5, 10, null));
+        skills.add(new Skill("galaxy_1", "Galactic Mastery", "+5% Galaxy Points earned per level.", SkillType.GALAXY_BOOST, 8, 25, "research_1"));
+        skills.add(new Skill("event_1", "Event Frequency", "Special events occur 10% more often per level.", SkillType.EVENT_BOOST, 3, 75, "galaxy_1"));
     }
 
     // --- Core Game Logic ---
@@ -303,10 +420,22 @@ public class MainActivity extends AppCompatActivity {
         if (getResearch("research_click_sps").isPurchased()) {
             clickValue = clickValue.add(BigInteger.valueOf(totalSps / 100));
         }
+        
+        // Check for critical clicks
+        int critChance = getSkillLevel("crit_1");
+        if (critChance > 0 && random.nextInt(100) < critChance) {
+            clickValue = clickValue.multiply(BigInteger.valueOf(1000));
+            Toast.makeText(this, "💥 CRITICAL CLICK! 1000x DAMAGE!", Toast.LENGTH_SHORT).show();
+        }
+        clickValue = getEventModifiedClickValue(clickValue);
         showStardustPopup(clickValue, btnClickStar);
         stardustCount = stardustCount.add(clickValue);
         totalClicks++;
         totalStardustEverEarned = totalStardustEverEarned.add(clickValue);
+        
+        // Update statistics
+        totalStardustFromClicks = totalStardustFromClicks.add(clickValue);
+        updateStatistics();
         playClickSound();
         updateUI();
         checkAchievements();
@@ -322,12 +451,14 @@ public class MainActivity extends AppCompatActivity {
         BigInteger totalCost = calculateCostForNUpgrades(upgrade, amount, getResearch("research_cheaper").isPurchased());
         if (stardustCount.compareTo(totalCost) >= 0) {
             stardustCount = stardustCount.subtract(totalCost);
-            // Now, actually increment the counts
+            // Now, actually increment the counts and check for milestones
             for (int i = 0; i < amount; i++) {
-                if (upgrade.count % Upgrade.MILESTONE_INTERVAL == 0 && i > 0) { // Check for milestones within the bulk purchase
-                    playMilestoneSound();
-                }
                 upgrade.count++;
+                totalUpgradesPurchased++;
+                if (upgrade.count % Upgrade.MILESTONE_INTERVAL == 0) { // Check for milestones
+                    playMilestoneSound();
+                    showMilestoneAnimation(upgrade.getCurrentName(), upgrade.count);
+                }
             }
             playUpgradeSound();
             recalculateSps();
@@ -344,9 +475,17 @@ public class MainActivity extends AppCompatActivity {
         if (getResearch("research_cheaper").isPurchased()) {
             cost = cost.multiply(BigInteger.valueOf(95)).divide(BigInteger.valueOf(100));
         }
+        
+        // Apply research cost reduction skill
+        int researchSkillLevel = getSkillLevel("research_1");
+        if (researchSkillLevel > 0) {
+            double reduction = researchSkillLevel * 0.05;
+            cost = cost.multiply(BigInteger.valueOf((long)((1.0 - reduction) * 100))).divide(BigInteger.valueOf(100));
+        }
         if (stardustCount.compareTo(cost) >= 0) {
             stardustCount = stardustCount.subtract(cost);
             research.setPurchased(true);
+            totalResearchPurchased++;
             playMilestoneSound();
             recalculateSps();
             refreshResearchUI();
@@ -372,10 +511,20 @@ public class MainActivity extends AppCompatActivity {
         if (getResearch("research_sps_boost").isPurchased()) {
             totalSpsDecimal = totalSpsDecimal.multiply(new BigDecimal("1.1"));
         }
+        
+        if (getResearch("research_critical_mass").isPurchased()) {
+            totalSpsDecimal = totalSpsDecimal.multiply(new BigDecimal("1.5"));
+        }
 
         int spsSkillLevel = getSkillLevel("sps_1");
         BigDecimal spsSkillBonus = BigDecimal.valueOf(spsSkillLevel * 0.02);
         totalSpsDecimal = totalSpsDecimal.multiply(BigDecimal.ONE.add(spsSkillBonus));
+        
+        // Apply galaxy points bonus
+        if (galaxyPoints > 0) {
+            BigDecimal galaxyBonus = BigDecimal.valueOf(galaxyPoints * 0.1);
+            totalSpsDecimal = totalSpsDecimal.multiply(BigDecimal.ONE.add(galaxyBonus));
+        }
 
         if (cosmicEssence > 0) {
             BigDecimal essenceMultiplier = BigDecimal.valueOf(Math.pow(2, cosmicEssence));
@@ -385,7 +534,8 @@ public class MainActivity extends AppCompatActivity {
         // Apply singularity bonus using the new helper method
         BigDecimal singularityMultiplier = BigDecimal.ONE.add(BigDecimal.valueOf(singularityCount * getSingularityBonus()));
         totalSpsDecimal = totalSpsDecimal.multiply(singularityMultiplier);
-        totalSps = totalSpsDecimal.toBigInteger().longValue();
+        long baseSps = totalSpsDecimal.toBigInteger().longValue();
+        totalSps = getEventModifiedSps(baseSps);
     }
 
     private void triggerSupernova() {
@@ -397,6 +547,7 @@ public class MainActivity extends AppCompatActivity {
             int earnedSingularities = (int) earned;
 
             singularityCount += earnedSingularities;
+            totalPrestigeCount++;
             Toast.makeText(this, "SUPERNOVA! You earned " + earnedSingularities + " Singularities!", Toast.LENGTH_LONG).show();
 
             // Reset everything EXCEPT singularities, essence and skills
@@ -412,16 +563,52 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // --- NEW: Galaxy Collapse Methods ---
+    private void triggerGalaxyCollapse() {
+        if (stardustCount.compareTo(GALAXY_COLLAPSE_COST) >= 0) {
+            new MaterialAlertDialogBuilder(this)
+                    .setMessage("🌌 Initiate Galaxy Collapse?\n\nThis will reset your Stardust and Upgrades in exchange for Galaxy Points. Galaxy Points provide a permanent 10% SPS boost each. Continue?")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Collapse", (dialog, which) -> {
+                        int earnedPoints = (int) Math.max(1, Math.log10(stardustCount.doubleValue()) - 17);
+                        
+                        // Apply galaxy boost skill
+                        int galaxySkillLevel = getSkillLevel("galaxy_1");
+                        if (galaxySkillLevel > 0) {
+                            double bonus = galaxySkillLevel * 0.05;
+                            earnedPoints = (int) (earnedPoints * (1 + bonus));
+                        }
+                        
+                        galaxyPoints += earnedPoints;
+                        totalGalaxyCollapseCount++;
+                        
+                        Toast.makeText(this, "GALAXY COLLAPSE! You earned " + earnedPoints + " Galaxy Points!", Toast.LENGTH_LONG).show();
+                        playMilestoneSound();
+                        
+                        // Reset stardust and upgrades but keep research, skills, singularities
+                        stardustCount = BigInteger.ZERO;
+                        totalClicks = 0;
+                        for (Upgrade upgrade : upgrades) upgrade.count = 0;
+                        
+                        saveGame();
+                        loadGame();
+                    })
+                    .show();
+        } else {
+            Toast.makeText(this, "You need at least " + formatBigNumber(GALAXY_COLLAPSE_COST) + " stardust for Galaxy Collapse.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     // --- NEW: Big Crunch Methods ---
     private void triggerBigCrunch() {
         if (singularityCount >= BIG_CRUNCH_COST) {
             new MaterialAlertDialogBuilder(this)
-                    .setTitle("Initiate Big Crunch?")
-                    .setMessage("This will reset your Stardust, Upgrades, Research, Skills, and ALL Singularities in exchange for 1 Cosmic Essence. Cosmic Essence provides a massive permanent boost. Are you sure?")
+                    .setMessage("💥 Initiate Big Crunch?\n\nThis will reset your Stardust, Upgrades, Research, Skills, and ALL Singularities in exchange for 1 Cosmic Essence. Cosmic Essence provides a massive permanent boost. Are you sure?")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("DO IT", (dialog, which) -> {
                         cosmicEssence++;
                         singularityCount = 0; // Reset singularities
+                        totalBigCrunchCount++;
 
                         Toast.makeText(this, "BIG CRUNCH! You have earned 1 Cosmic Essence!", Toast.LENGTH_LONG).show();
                         playMilestoneSound();
@@ -452,6 +639,7 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(KEY_STARDUST, stardustCount.toString());
         editor.putInt(KEY_SINGULARITY, singularityCount);
+        editor.putInt(KEY_GALAXY_POINTS, galaxyPoints); // NEW
         editor.putInt(KEY_COSMIC_ESSENCE, cosmicEssence); // NEW
         for (int i = 0; i < upgrades.size(); i++) editor.putInt(KEY_UPGRADE_COUNT_PREFIX + i, upgrades.get(i).count);
         for (ResearchUpgrade research : researchUpgrades) editor.putBoolean(KEY_RESEARCH_PREFIX + research.getId(), research.isPurchased());
@@ -462,12 +650,37 @@ public class MainActivity extends AppCompatActivity {
         editor.putLong(KEY_TOTAL_CLICKS, totalClicks);
         editor.putString(KEY_TOTAL_STARDUST_EARNED, totalStardustEverEarned.toString());
         editor.putLong(KEY_LAST_ONLINE_TIME, System.currentTimeMillis());
+        
+        // Save statistics
+        editor.putLong(KEY_TOTAL_TIME_PLAYED, totalTimePlayed + (System.currentTimeMillis() - sessionStartTime));
+        editor.putInt(KEY_TOTAL_PRESTIGE_COUNT, totalPrestigeCount);
+        editor.putInt(KEY_TOTAL_GALAXY_COUNT, totalGalaxyCollapseCount);
+        editor.putInt(KEY_TOTAL_BIG_CRUNCH_COUNT, totalBigCrunchCount);
+        editor.putString(KEY_HIGHEST_STARDUST, highestStardustReached.toString());
+        editor.putLong(KEY_BEST_SPS, bestSpsAchieved);
+        editor.putLong(KEY_TOTAL_UPGRADES_PURCHASED, totalUpgradesPurchased);
+        editor.putInt(KEY_TOTAL_RESEARCH_PURCHASED, totalResearchPurchased);
+        editor.putString(KEY_STARDUST_FROM_CLICKS, totalStardustFromClicks.toString());
+        editor.putString(KEY_STARDUST_FROM_PRODUCTION, totalStardustFromProduction.toString());
+        
+        // Save events seen
+        for (Map.Entry<String, Integer> entry : eventsSeen.entrySet()) {
+            editor.putInt(KEY_EVENTS_SEEN_PREFIX + entry.getKey(), entry.getValue());
+        }
+        
+        // Save audio settings
+        editor.putBoolean(KEY_SOUND_ENABLED, soundEnabled);
+        editor.putBoolean(KEY_MUSIC_ENABLED, musicEnabled);
+        editor.putFloat(KEY_MUSIC_VOLUME, musicVolume);
+        editor.putFloat(KEY_SOUND_VOLUME, soundVolume);
+        
         editor.apply();
     }
 
     private void loadGame() {
         stardustCount = new BigInteger(prefs.getString(KEY_STARDUST, "0"));
         singularityCount = prefs.getInt(KEY_SINGULARITY, 0);
+        galaxyPoints = prefs.getInt(KEY_GALAXY_POINTS, 0); // NEW
         cosmicEssence = prefs.getInt(KEY_COSMIC_ESSENCE, 0); // NEW
         for (int i = 0; i < upgrades.size(); i++) upgrades.get(i).count = prefs.getInt(KEY_UPGRADE_COUNT_PREFIX + i, 0);
         for (ResearchUpgrade research : researchUpgrades) research.setPurchased(prefs.getBoolean(KEY_RESEARCH_PREFIX + research.getId(), false));
@@ -477,8 +690,37 @@ public class MainActivity extends AppCompatActivity {
         }
         totalClicks = prefs.getLong(KEY_TOTAL_CLICKS, 0);
         totalStardustEverEarned = new BigInteger(prefs.getString(KEY_TOTAL_STARDUST_EARNED, "0"));
+        
+        // Load statistics
+        totalTimePlayed = prefs.getLong(KEY_TOTAL_TIME_PLAYED, 0);
+        totalPrestigeCount = prefs.getInt(KEY_TOTAL_PRESTIGE_COUNT, 0);
+        totalGalaxyCollapseCount = prefs.getInt(KEY_TOTAL_GALAXY_COUNT, 0);
+        totalBigCrunchCount = prefs.getInt(KEY_TOTAL_BIG_CRUNCH_COUNT, 0);
+        highestStardustReached = new BigInteger(prefs.getString(KEY_HIGHEST_STARDUST, "0"));
+        bestSpsAchieved = prefs.getLong(KEY_BEST_SPS, 0);
+        totalUpgradesPurchased = prefs.getLong(KEY_TOTAL_UPGRADES_PURCHASED, 0);
+        totalResearchPurchased = prefs.getInt(KEY_TOTAL_RESEARCH_PURCHASED, 0);
+        totalStardustFromClicks = new BigInteger(prefs.getString(KEY_STARDUST_FROM_CLICKS, "0"));
+        totalStardustFromProduction = new BigInteger(prefs.getString(KEY_STARDUST_FROM_PRODUCTION, "0"));
+        
+        // Load events seen
+        eventsSeen.clear();
+        eventsSeen.put("stardust_rain", prefs.getInt(KEY_EVENTS_SEEN_PREFIX + "stardust_rain", 0));
+        eventsSeen.put("cosmic_storm", prefs.getInt(KEY_EVENTS_SEEN_PREFIX + "cosmic_storm", 0));
+        eventsSeen.put("black_hole_surge", prefs.getInt(KEY_EVENTS_SEEN_PREFIX + "black_hole_surge", 0));
+        eventsSeen.put("time_warp", prefs.getInt(KEY_EVENTS_SEEN_PREFIX + "time_warp", 0));
+        
+        // Load audio settings
+        soundEnabled = prefs.getBoolean(KEY_SOUND_ENABLED, true);
+        musicEnabled = prefs.getBoolean(KEY_MUSIC_ENABLED, true);
+        musicVolume = prefs.getFloat(KEY_MUSIC_VOLUME, 0.5f);
+        soundVolume = prefs.getFloat(KEY_SOUND_VOLUME, 1.0f);
+        updateMusicVolume();
+        
+        sessionStartTime = System.currentTimeMillis();
         recalculateSps();
         updateUI();
+        setBuyAmount(currentBuyAmount); // Refresh buy amount buttons
         if (tabLayout.getSelectedTabPosition() == 0) refreshCelestialObjectsUI(); else refreshResearchUI();
     }
 
@@ -486,16 +728,27 @@ public class MainActivity extends AppCompatActivity {
     private void setBuyAmount(int amount) {
         currentBuyAmount = amount;
 
-        // Update the visual state of the buttons
+        // Update the visual state of all buttons
         btnBuy1.setAlpha(amount == 1 ? 1.0f : 0.5f);
         btnBuy10.setAlpha(amount == 10 ? 1.0f : 0.5f);
         btnBuy25.setAlpha(amount == 25 ? 1.0f : 0.5f);
+        
+        // Only show x50 and x100 if research is unlocked
+        boolean bulkUnlocked = getResearch("research_bulk_buy").isPurchased();
+        if (bulkUnlocked) {
+            btnBuy50.setVisibility(View.VISIBLE);
+            btnBuy100.setVisibility(View.VISIBLE);
+            btnBuy50.setAlpha(amount == 50 ? 1.0f : 0.5f);
+            btnBuy100.setAlpha(amount == 100 ? 1.0f : 0.5f);
+        } else {
+            btnBuy50.setVisibility(View.GONE);
+            btnBuy100.setVisibility(View.GONE);
+        }
 
         // Refresh the UI to show the new costs for the selected amount
         if (tabLayout.getSelectedTabPosition() == 0) {
             refreshCelestialObjectsUI();
         }
-        // Note: Research tab is not affected by buy amount, so no need to refresh it.
     }
 
 
@@ -536,7 +789,10 @@ public class MainActivity extends AppCompatActivity {
             buy.setText(String.format(Locale.getDefault(), "Buy %d (%s)", currentBuyAmount, formatBigNumber(totalCost)));
 
             // We must set the listener every time, as the reference can be lost
-            buy.setOnClickListener(view -> buyUpgrade(upgrade));
+            buy.setOnClickListener(view -> {
+                animateUpgradePurchase(view);
+                buyUpgrade(upgrade);
+            });
 
             pBar.setMax(Upgrade.MILESTONE_INTERVAL);
             pBar.setProgress(upgrade.count % Upgrade.MILESTONE_INTERVAL);
@@ -584,7 +840,10 @@ public class MainActivity extends AppCompatActivity {
                 buy.setText(String.format("Buy (%s)", formatBigNumber(cost)));
                 buy.setEnabled(true);
                 v.setAlpha(1.0f);
-                buy.setOnClickListener(view -> buyResearch(research));
+                buy.setOnClickListener(view -> {
+                    animateUpgradePurchase(view);
+                    buyResearch(research);
+                });
             }
             llUpgradesContainer.addView(v);
         }
@@ -607,12 +866,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // --- These don't need debouncing as they change less often ---
+        String galaxyText = (galaxyPoints > 0) ? String.format(Locale.getDefault(), " | %d Galaxy", galaxyPoints) : "";
         String essenceText = (cosmicEssence > 0) ? String.format(Locale.getDefault(), " | %d Essence", cosmicEssence) : "";
         double currentSingularityBonus = getSingularityBonus();
         int bonusPercent = (int) (singularityCount * currentSingularityBonus * 100);
-        tvSingularityCount.setText(String.format(Locale.getDefault(), "%d Singularities (+%d%% SPS)%s", singularityCount, bonusPercent, essenceText));
+        tvSingularityCount.setText(String.format(Locale.getDefault(), "%d Singularities (+%d%% SPS)%s%s", singularityCount, bonusPercent, galaxyText, essenceText));
 
         btnSupernova.setVisibility(stardustCount.compareTo(supernovaCost) >= 0 ? View.VISIBLE : View.GONE);
+        btnGalaxyCollapse.setVisibility(stardustCount.compareTo(GALAXY_COLLAPSE_COST) >= 0 ? View.VISIBLE : View.GONE);
         btnBigCrunch.setVisibility(singularityCount >= BIG_CRUNCH_COST ? View.VISIBLE : View.GONE);
     }
 
@@ -743,6 +1004,7 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog dialog = builder.create();
         btnClaim.setOnClickListener(v -> {
             // The currency has already been added, so we just dismiss the dialog
+            playNotificationSound();
             dialog.dismiss();
         });
 
@@ -767,6 +1029,7 @@ public class MainActivity extends AppCompatActivity {
             stardustCount = stardustCount.add(reward);
             totalStardustEverEarned = totalStardustEverEarned.add(reward);
             prefs.edit().putLong(KEY_LAST_DAILY_REWARD, System.currentTimeMillis()).apply();
+            playNotificationSound();
             updateUI();
             checkAchievements();
             Toast.makeText(this, "+" + formatBigNumber(reward) + " Stardust!", Toast.LENGTH_SHORT).show();
@@ -778,12 +1041,28 @@ public class MainActivity extends AppCompatActivity {
         Runnable gameRunnable = new Runnable() {
             @Override
             public void run() {
-                BigInteger spsToAdd = BigInteger.valueOf(totalSps);
-                stardustCount = stardustCount.add(spsToAdd);
-                totalStardustEverEarned = totalStardustEverEarned.add(spsToAdd);
-                updateUI();
-                checkAchievements();
-                gameLoopHandler.postDelayed(this, 1000);
+                if (!isInBackground) {
+                    BigInteger spsToAdd = BigInteger.valueOf(totalSps);
+                    stardustCount = stardustCount.add(spsToAdd);
+                    totalStardustEverEarned = totalStardustEverEarned.add(spsToAdd);
+                    totalStardustFromProduction = totalStardustFromProduction.add(spsToAdd);
+                    
+                    // Use frame skipping for better performance
+                    frameSkipCounter++;
+                    if (frameSkipCounter >= FRAME_SKIP_INTERVAL || totalSps > 1000000) {
+                        updateUI();
+                        frameSkipCounter = 0;
+                    }
+                    
+                    // Only check achievements every few seconds to save performance
+                    if (System.currentTimeMillis() % 3000 < 1000) {
+                        checkAchievements();
+                        updateStatistics();
+                    }
+                }
+                
+                long delay = isInBackground ? 5000 : 1000; // Slower updates when in background
+                gameLoopHandler.postDelayed(this, delay);
             }
         };
         gameLoopHandler.post(gameRunnable);
@@ -847,25 +1126,58 @@ public class MainActivity extends AppCompatActivity {
         fadeInSet.start();
     }
     private void explodeParticles(float x, float y) {
-        for (int i = 0; i < 15; i++) {
+        // Enhanced particle system with better performance and visuals
+        int particleCount = isEventActive ? 25 : 15; // More particles during events
+        
+        for (int i = 0; i < particleCount; i++) {
             final ImageView particle = new ImageView(this);
             particle.setImageResource(R.drawable.ic_stardust_particle);
-            int size = 20 + random.nextInt(30);
+            
+            // Varied particle sizes
+            int size = 15 + random.nextInt(25);
             particle.setLayoutParams(new ViewGroup.LayoutParams(size, size));
             particle.setX(x - size/2f);
             particle.setY(y - size/2f);
+            
+            // Random colors for special events
+            if (isEventActive) {
+                switch (currentEventType) {
+                    case "stardust_rain":
+                        particle.setColorFilter(getResources().getColor(R.color.accent_cyan, getTheme()));
+                        break;
+                    case "cosmic_storm":
+                        particle.setColorFilter(getResources().getColor(R.color.accent_gold, getTheme()));
+                        break;
+                    case "black_hole_surge":
+                        particle.setColorFilter(getResources().getColor(R.color.star_color, getTheme()));
+                        break;
+                }
+            }
+            
             rootLayout.addView(particle);
-            float endX = (float) (x + (random.nextFloat() - 0.5) * 400);
-            float endY = (float) (y + (random.nextFloat() - 0.5) * 400);
+            
+            // More dynamic particle movement
+            float angle = (float) (random.nextFloat() * 2 * Math.PI);
+            float velocity = 200 + random.nextFloat() * 300;
+            float endX = x + (float) (Math.cos(angle) * velocity);
+            float endY = y + (float) (Math.sin(angle) * velocity);
+            
             ObjectAnimator animator = ObjectAnimator.ofPropertyValuesHolder(particle,
-                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, endX),
-                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, endY),
-                    PropertyValuesHolder.ofFloat(View.ALPHA, 0f)
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, endX - x),
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, endY - y),
+                    PropertyValuesHolder.ofFloat(View.ALPHA, 0f),
+                    PropertyValuesHolder.ofFloat(View.ROTATION, random.nextFloat() * 720)
             );
-            animator.setDuration(800 + random.nextInt(400));
+            
+            animator.setDuration(600 + random.nextInt(600));
             animator.setInterpolator(new DecelerateInterpolator());
             animator.addListener(new AnimatorListenerAdapter() {
-                @Override public void onAnimationEnd(Animator animation) { rootLayout.removeView(particle); }
+                @Override 
+                public void onAnimationEnd(Animator animation) { 
+                    if (particle.getParent() != null) {
+                        rootLayout.removeView(particle); 
+                    }
+                }
             });
             animator.start();
         }
@@ -875,10 +1187,35 @@ public class MainActivity extends AppCompatActivity {
             if (!achievement.isUnlocked()) {
                 boolean newlyUnlocked = false;
                 switch (achievement.getType()) {
-                    case TOTAL_CLICKS: if (totalClicks >= achievement.getGoal()) newlyUnlocked = true; break;
-                    case TOTAL_STARDUST: if (totalStardustEverEarned.compareTo(BigInteger.valueOf(achievement.getGoal())) >= 0) newlyUnlocked = true; break;
-                    case UPGRADE_COUNT: int index = achievement.getTargetUpgradeIndex(); if (index >= 0 && index < upgrades.size() && upgrades.get(index).count >= achievement.getGoal()) newlyUnlocked = true; break;
-                    case REACH_SPS: if (totalSps >= achievement.getGoal()) newlyUnlocked = true; break;
+                    case TOTAL_CLICKS: 
+                        if (totalClicks >= achievement.getGoal()) newlyUnlocked = true; 
+                        break;
+                    case TOTAL_STARDUST: 
+                        if (totalStardustEverEarned.compareTo(BigInteger.valueOf(achievement.getGoal())) >= 0) newlyUnlocked = true; 
+                        break;
+                    case UPGRADE_COUNT: 
+                        int index = achievement.getTargetUpgradeIndex(); 
+                        if (index >= 0 && index < upgrades.size() && upgrades.get(index).count >= achievement.getGoal()) newlyUnlocked = true; 
+                        break;
+                    case REACH_SPS: 
+                        if (totalSps >= achievement.getGoal()) newlyUnlocked = true; 
+                        break;
+                    case SINGULARITY_COUNT:
+                        if (singularityCount >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case RESEARCH_COUNT:
+                        int researchCount = 0;
+                        for (ResearchUpgrade research : researchUpgrades) {
+                            if (research.isPurchased()) researchCount++;
+                        }
+                        if (researchCount >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case ESSENCE_COUNT:
+                        if (cosmicEssence >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
+                    case GALAXY_COUNT:
+                        if (galaxyPoints >= achievement.getGoal()) newlyUnlocked = true;
+                        break;
                 }
                 if (newlyUnlocked) unlockAchievement(achievement);
             }
@@ -910,7 +1247,9 @@ public class MainActivity extends AppCompatActivity {
             }
             container.addView(itemView);
         }
-        builder.setView(dialogView).setPositiveButton("Close", (d, w) -> d.dismiss()).show();
+        AlertDialog dialog = builder.setView(dialogView).create();
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.show();
     }
 
     // --- Skill Tree Methods ---
@@ -919,7 +1258,8 @@ public class MainActivity extends AppCompatActivity {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_skill_tree, null);
         LinearLayout container = dialogView.findViewById(R.id.llSkillContainer);
         TextView tvPoints = dialogView.findViewById(R.id.tvSingularityPoints);
-        AlertDialog dialog = builder.setView(dialogView).setPositiveButton("Close", (d, w) -> d.dismiss()).create();
+        AlertDialog dialog = builder.setView(dialogView).create();
+        dialog.setCanceledOnTouchOutside(true);
         populateSkillTreeUI(container, tvPoints, dialog);
         dialog.show();
     }
@@ -963,6 +1303,7 @@ public class MainActivity extends AppCompatActivity {
         if (singularityCount >= skill.getNextCost() && skill.canLevelUp()) {
             singularityCount -= skill.getNextCost();
             skill.setCurrentLevel(skill.getCurrentLevel() + 1);
+            playSkillUnlockSound();
             recalculateSps();
             updateUI();
         }
@@ -995,31 +1336,189 @@ public class MainActivity extends AppCompatActivity {
     // --- Sound and Animation ---
     private void setupSoundPool() {
         AudioAttributes audioAttributes = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
-        soundPool = new SoundPool.Builder().setMaxStreams(5).setAudioAttributes(audioAttributes).build();
+        soundPool = new SoundPool.Builder().setMaxStreams(8).setAudioAttributes(audioAttributes).build();
+        
+        // Load all sound effects
+        clickSoundId = soundPool.load(this, R.raw.click_sound, 1);
+        upgradeSoundId = soundPool.load(this, R.raw.upgrade_sound, 1);
+        milestoneSoundId = soundPool.load(this, R.raw.milestone_sound, 1);
+        achievementSoundId = soundPool.load(this, R.raw.achievement_sound, 1);
+        
+        // Use existing sounds as placeholders for new sounds until new audio files are added
+        buttonSoundId = clickSoundId; // Placeholder: use click sound for buttons
+        notificationSoundId = achievementSoundId; // Placeholder: use achievement sound for notifications
+        skillUnlockSoundId = milestoneSoundId; // Placeholder: use milestone sound for skill unlocks
+        riftSoundId = milestoneSoundId; // Placeholder: use milestone sound for rifts
+        
+        setupBackgroundMusic();
     }
-    private void playClickSound() { if (soundEnabled && clickSoundId != 0) soundPool.play(clickSoundId, 1, 1, 0, 0, 1); }
-    private void playUpgradeSound() { if (soundEnabled && upgradeSoundId != 0) soundPool.play(upgradeSoundId, 1, 1, 0, 0, 1); }
-    private void playMilestoneSound() { if (soundEnabled && milestoneSoundId != 0) soundPool.play(milestoneSoundId, 1, 1, 1, 0, 1); }
-    private void playAchievementSound() { if (soundEnabled && achievementSoundId != 0) soundPool.play(achievementSoundId, 0.8f, 0.8f, 2, 0, 1); }
-    private void playRiftSound() { if (soundEnabled && riftSoundId != 0) soundPool.play(riftSoundId, 0.7f, 0.7f, 3, 0, 1); }
+    
+    private void setupBackgroundMusic() {
+        try {
+            // TODO: Add background_music.mp3 to res/raw folder
+            // For now, background music is disabled until audio file is added
+            // backgroundMusic = MediaPlayer.create(this, R.raw.background_music);
+            // if (backgroundMusic != null) {
+            //     backgroundMusic.setLooping(true);
+            //     backgroundMusic.setVolume(musicVolume, musicVolume);
+            // }
+        } catch (Exception e) {
+            // Background music file not found, continue without background music
+            backgroundMusic = null;
+        }
+    }
+    private void playClickSound() { 
+        if (soundEnabled && clickSoundId != 0) soundPool.play(clickSoundId, soundVolume, soundVolume, 0, 0, 1); 
+    }
+    private void playUpgradeSound() { 
+        if (soundEnabled && upgradeSoundId != 0) soundPool.play(upgradeSoundId, soundVolume, soundVolume, 0, 0, 1); 
+    }
+    private void playMilestoneSound() { 
+        if (soundEnabled && milestoneSoundId != 0) soundPool.play(milestoneSoundId, soundVolume, soundVolume, 1, 0, 1); 
+    }
+    private void playAchievementSound() { 
+        if (soundEnabled && achievementSoundId != 0) soundPool.play(achievementSoundId, soundVolume * 0.8f, soundVolume * 0.8f, 2, 0, 1); 
+    }
+    private void playRiftSound() { 
+        if (soundEnabled && riftSoundId != 0) soundPool.play(riftSoundId, soundVolume * 0.7f, soundVolume * 0.7f, 3, 0, 1); 
+    }
+    private void playButtonSound() { 
+        if (soundEnabled && buttonSoundId != 0) soundPool.play(buttonSoundId, soundVolume * 0.5f, soundVolume * 0.5f, 0, 0, 1.2f); 
+    }
+    private void playNotificationSound() { 
+        if (soundEnabled && notificationSoundId != 0) soundPool.play(notificationSoundId, soundVolume, soundVolume, 1, 0, 1); 
+    }
+    private void playSkillUnlockSound() { 
+        if (soundEnabled && skillUnlockSoundId != 0) soundPool.play(skillUnlockSoundId, soundVolume, soundVolume, 2, 0, 1); 
+    }
+    
+    // Background music controls
+    private void startBackgroundMusic() {
+        if (musicEnabled && backgroundMusic != null && !backgroundMusic.isPlaying()) {
+            backgroundMusic.start();
+        }
+    }
+    
+    private void pauseBackgroundMusic() {
+        if (backgroundMusic != null && backgroundMusic.isPlaying()) {
+            backgroundMusic.pause();
+        }
+    }
+    
+    private void updateMusicVolume() {
+        if (backgroundMusic != null) {
+            backgroundMusic.setVolume(musicVolume, musicVolume);
+        }
+    }
     private void animateClick(View view) {
+        // Enhanced click animation with more dramatic effect
         AnimatorSet set = new AnimatorSet();
-        set.playTogether(
-                ObjectAnimator.ofFloat(view, "scaleX", 1f, 0.9f, 1f),
-                ObjectAnimator.ofFloat(view, "scaleY", 1f, 0.9f, 1f)
-        );
-        set.setDuration(150);
+        ObjectAnimator scaleX = ObjectAnimator.ofFloat(view, "scaleX", 1f, 0.85f, 1.1f, 1f);
+        ObjectAnimator scaleY = ObjectAnimator.ofFloat(view, "scaleY", 1f, 0.85f, 1.1f, 1f);
+        ObjectAnimator rotation = ObjectAnimator.ofFloat(view, "rotation", 0f, 5f, -5f, 0f);
+        
+        set.playTogether(scaleX, scaleY, rotation);
+        set.setDuration(300);
+        set.setInterpolator(new DecelerateInterpolator());
         set.start();
+        
+        // Add a glow effect for events
+        if (isEventActive && "stardust_rain".equals(currentEventType)) {
+            ObjectAnimator glow = ObjectAnimator.ofFloat(view, "alpha", 1f, 0.7f, 1f);
+            glow.setDuration(200);
+            glow.start();
+        }
     }
+    
+    private void animateUpgradePurchase(View view) {
+        // Create a satisfying purchase animation
+        AnimatorSet set = new AnimatorSet();
+        ObjectAnimator scaleX = ObjectAnimator.ofFloat(view, "scaleX", 1f, 0.95f, 1.05f, 1f);
+        ObjectAnimator scaleY = ObjectAnimator.ofFloat(view, "scaleY", 1f, 0.95f, 1.05f, 1f);
+        
+        set.playTogether(scaleX, scaleY);
+        set.setDuration(200);
+        set.setInterpolator(new DecelerateInterpolator());
+        set.start();
+        
+        // Add a color flash effect
+        ObjectAnimator colorFlash = ObjectAnimator.ofArgb(view, "backgroundColor", 
+                getResources().getColor(R.color.accent_gold, getTheme()),
+                getResources().getColor(android.R.color.transparent, getTheme()));
+        colorFlash.setDuration(300);
+        colorFlash.start();
+    }
+    
+    private void showMilestoneAnimation(String upgradeName, int count) {
+        // Create a celebratory milestone animation
+        TextView milestoneText = new TextView(this);
+        milestoneText.setText(String.format("🎉 %s reached %d! 🎉", upgradeName, count));
+        milestoneText.setTextColor(getResources().getColor(R.color.accent_gold, getTheme()));
+        milestoneText.setTextSize(20f);
+        milestoneText.setTypeface(null, Typeface.BOLD);
+        milestoneText.setShadowLayer(5, 0, 0, getResources().getColor(R.color.black, getTheme()));
+        milestoneText.setGravity(android.view.Gravity.CENTER);
+        
+        ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        milestoneText.setLayoutParams(params);
+        rootLayout.addView(milestoneText);
+        
+        // Position in center of screen
+        milestoneText.setX((rootLayout.getWidth() - milestoneText.getWidth()) / 2f);
+        milestoneText.setY((rootLayout.getHeight() - milestoneText.getHeight()) / 2f);
+        
+        // Animate the milestone celebration
+        AnimatorSet celebrationSet = new AnimatorSet();
+        ObjectAnimator scaleX = ObjectAnimator.ofFloat(milestoneText, "scaleX", 0f, 1.2f, 1f);
+        ObjectAnimator scaleY = ObjectAnimator.ofFloat(milestoneText, "scaleY", 0f, 1.2f, 1f);
+        ObjectAnimator rotation = ObjectAnimator.ofFloat(milestoneText, "rotation", 0f, 10f, -10f, 0f);
+        
+        celebrationSet.playTogether(scaleX, scaleY, rotation);
+        celebrationSet.setDuration(800);
+        celebrationSet.setInterpolator(new DecelerateInterpolator());
+        
+        celebrationSet.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                // Fade out after celebration
+                milestoneText.animate()
+                        .alpha(0f)
+                        .translationY(-100)
+                        .setDuration(1000)
+                        .setListener(new AnimatorListenerAdapter() {
+                            @Override
+                            public void onAnimationEnd(Animator animation) {
+                                if (milestoneText.getParent() != null) {
+                                    rootLayout.removeView(milestoneText);
+                                }
+                            }
+                        })
+                        .start();
+            }
+        });
+        
+        celebrationSet.start();
+    }
+    
     private void createTwinklingStars(int count) {
-        if (rootLayout.getWidth() == 0) return;
+        if (rootLayout.getWidth() == 0 || isInBackground) return;
+        
+        // Reduce star count when performance is needed
+        int actualCount = totalSps > 100000 ? Math.min(count, 8) : count;
+        
+        // Remove existing stars
         for (int i = 0; i < rootLayout.getChildCount(); i++) {
             if ("twinkling_star".equals(rootLayout.getChildAt(i).getTag())) {
                 rootLayout.removeViewAt(i);
                 i--;
             }
         }
-        for (int i = 0; i < count; i++) {
+        
+        // Create new stars with better performance
+        for (int i = 0; i < actualCount; i++) {
             final View star = new View(this);
             star.setTag("twinkling_star");
             star.setBackgroundColor(getResources().getColor(R.color.white, getTheme()));
@@ -1027,7 +1526,16 @@ public class MainActivity extends AppCompatActivity {
             ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(size, size);
             star.setLayoutParams(params);
             rootLayout.addView(star, 0);
-            twinkle(star);
+            
+            // Only animate if not in performance mode
+            if (totalSps < 500000) {
+                twinkle(star);
+            } else {
+                // Static stars for performance
+                star.setX(random.nextInt(rootLayout.getWidth()));
+                star.setY(random.nextInt(rootLayout.getHeight()));
+                star.setAlpha(0.3f + random.nextFloat() * 0.7f);
+            }
         }
     }
     private void twinkle(final View star) {
@@ -1078,12 +1586,66 @@ public class MainActivity extends AppCompatActivity {
     private void showSettingsDialog() {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_settings, null);
+        
         SwitchMaterial switchSound = dialogView.findViewById(R.id.switchSound);
+        SwitchMaterial switchMusic = dialogView.findViewById(R.id.switchMusic);
+        android.widget.SeekBar seekBarMusicVolume = dialogView.findViewById(R.id.seekBarMusicVolume);
+        android.widget.SeekBar seekBarSoundVolume = dialogView.findViewById(R.id.seekBarSoundVolume);
+        
+        // Set current values
         switchSound.setChecked(soundEnabled);
-        switchSound.setOnCheckedChangeListener((buttonView, isChecked) -> soundEnabled = isChecked);
-        builder.setView(dialogView)
-                .setPositiveButton("Close", (dialog, which) -> dialog.dismiss())
-                .show();
+        switchMusic.setChecked(musicEnabled);
+        seekBarMusicVolume.setProgress((int)(musicVolume * 100));
+        seekBarSoundVolume.setProgress((int)(soundVolume * 100));
+        
+        // Set listeners
+        switchSound.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            soundEnabled = isChecked;
+            saveGame(); // Save immediately
+        });
+        
+        switchMusic.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            musicEnabled = isChecked;
+            if (musicEnabled) {
+                startBackgroundMusic();
+            } else {
+                pauseBackgroundMusic();
+            }
+            saveGame(); // Save immediately
+        });
+        
+        seekBarMusicVolume.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    musicVolume = progress / 100.0f;
+                    updateMusicVolume();
+                }
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                saveGame(); // Save when user stops dragging
+            }
+        });
+        
+        seekBarSoundVolume.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    soundVolume = progress / 100.0f;
+                    // Play a test sound to preview volume
+                    playButtonSound();
+                }
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                saveGame(); // Save when user stops dragging
+            }
+        });
+        
+        AlertDialog dialog = builder.setView(dialogView).create();
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.show();
     }
     private void startAutoSave() {
         autoSaveRunnable = new Runnable() {
@@ -1094,5 +1656,246 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         autoSaveHandler.postDelayed(autoSaveRunnable, 10000);
+    }
+    
+    // --- NEW: Statistics Methods ---
+    private void updateStatistics() {
+        // Update highest stardust reached
+        if (stardustCount.compareTo(highestStardustReached) > 0) {
+            highestStardustReached = stardustCount;
+        }
+        
+        // Update best SPS achieved
+        if (totalSps > bestSpsAchieved) {
+            bestSpsAchieved = totalSps;
+        }
+        
+        // Calculate average clicks per second
+        long currentSessionTime = System.currentTimeMillis() - sessionStartTime;
+        if (currentSessionTime > 0) {
+            averageClicksPerSecond = (totalClicks * 1000) / (totalTimePlayed + currentSessionTime);
+        }
+    }
+    
+    private void showStatisticsDialog() {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_statistics, null);
+        
+        if (dialogView == null) {
+            Toast.makeText(this, "Error loading statistics dialog", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Game Progress Statistics
+        TextView tvTimePlayed = dialogView.findViewById(R.id.tvTimePlayed);
+        TextView tvTotalClicks = dialogView.findViewById(R.id.tvTotalClicks);
+        TextView tvTotalStardust = dialogView.findViewById(R.id.tvTotalStardust);
+        TextView tvHighestStardust = dialogView.findViewById(R.id.tvHighestStardust);
+        TextView tvBestSps = dialogView.findViewById(R.id.tvBestSps);
+        
+        // Prestige Statistics
+        TextView tvTotalPrestiges = dialogView.findViewById(R.id.tvTotalPrestiges);
+        TextView tvGalaxyCollapses = dialogView.findViewById(R.id.tvGalaxyCollapses);
+        TextView tvBigCrunches = dialogView.findViewById(R.id.tvBigCrunches);
+        
+        // Purchase Statistics
+        TextView tvUpgradesPurchased = dialogView.findViewById(R.id.tvUpgradesPurchased);
+        TextView tvResearchPurchased = dialogView.findViewById(R.id.tvResearchPurchased);
+        
+        // Efficiency Statistics
+        TextView tvClicksPerSecond = dialogView.findViewById(R.id.tvClicksPerSecond);
+        TextView tvStardustFromClicks = dialogView.findViewById(R.id.tvStardustFromClicks);
+        TextView tvStardustFromProduction = dialogView.findViewById(R.id.tvStardustFromProduction);
+        
+        // Event Statistics
+        TextView tvEventsStardust = dialogView.findViewById(R.id.tvEventsStardust);
+        TextView tvEventsCosmic = dialogView.findViewById(R.id.tvEventsCosmic);
+        TextView tvEventsBlackhole = dialogView.findViewById(R.id.tvEventsBlackhole);
+        TextView tvEventsTime = dialogView.findViewById(R.id.tvEventsTime);
+        
+        // Calculate current session + total time
+        long currentTotalTime = totalTimePlayed + (System.currentTimeMillis() - sessionStartTime);
+        updateStatistics();
+        
+        // Format and set the statistics
+        tvTimePlayed.setText(formatTime(currentTotalTime));
+        tvTotalClicks.setText(String.format("%,d clicks", totalClicks));
+        tvTotalStardust.setText(formatBigNumber(totalStardustEverEarned));
+        tvHighestStardust.setText(formatBigNumber(highestStardustReached));
+        tvBestSps.setText(formatBigNumber(BigInteger.valueOf(bestSpsAchieved)) + "/sec");
+        
+        tvTotalPrestiges.setText(String.valueOf(totalPrestigeCount));
+        tvGalaxyCollapses.setText(String.valueOf(totalGalaxyCollapseCount));
+        tvBigCrunches.setText(String.valueOf(totalBigCrunchCount));
+        
+        tvUpgradesPurchased.setText(String.format("%,d upgrades", totalUpgradesPurchased));
+        tvResearchPurchased.setText(String.format("%d research", totalResearchPurchased));
+        
+        tvClicksPerSecond.setText(String.format("%.2f clicks/sec", averageClicksPerSecond / 1000.0));
+        tvStardustFromClicks.setText(formatBigNumber(totalStardustFromClicks));
+        tvStardustFromProduction.setText(formatBigNumber(totalStardustFromProduction));
+        
+        tvEventsStardust.setText(String.valueOf(eventsSeen.getOrDefault("stardust_rain", 0)));
+        tvEventsCosmic.setText(String.valueOf(eventsSeen.getOrDefault("cosmic_storm", 0)));
+        tvEventsBlackhole.setText(String.valueOf(eventsSeen.getOrDefault("black_hole_surge", 0)));
+        tvEventsTime.setText(String.valueOf(eventsSeen.getOrDefault("time_warp", 0)));
+        
+        AlertDialog dialog = builder.setView(dialogView).create();
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.show();
+    }
+    
+    private String formatTime(long milliseconds) {
+        long seconds = milliseconds / 1000;
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        long days = hours / 24;
+        
+        if (days > 0) {
+            return String.format("%dd %dh %dm", days, hours % 24, minutes % 60);
+        } else if (hours > 0) {
+            return String.format("%dh %dm %ds", hours, minutes % 60, seconds % 60);
+        } else if (minutes > 0) {
+            return String.format("%dm %ds", minutes, seconds % 60);
+        } else {
+            return String.format("%ds", seconds);
+        }
+    }
+    
+    // --- NEW: Automation Features ---
+    private void startAutomation() {
+        startAutoClick();
+        startAutoBuy();
+    }
+    
+    private void startAutoClick() {
+        if (getResearch("research_auto_click").isPurchased()) {
+            autoClickRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    onStarClicked();
+                    autoClickHandler.postDelayed(this, 5000); // Every 5 seconds
+                }
+            };
+            autoClickHandler.postDelayed(autoClickRunnable, 5000);
+        }
+    }
+    
+    private void startAutoBuy() {
+        if (getResearch("research_auto_buy").isPurchased()) {
+            autoBuyRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    autoBuyCheapestUpgrade();
+                    autoBuyHandler.postDelayed(this, 10000); // Every 10 seconds
+                }
+            };
+            autoBuyHandler.postDelayed(autoBuyRunnable, 10000);
+        }
+    }
+    
+    private void autoBuyCheapestUpgrade() {
+        Upgrade cheapest = null;
+        BigInteger cheapestCost = null;
+        boolean isCheaper = getResearch("research_cheaper").isPurchased();
+        
+        for (Upgrade upgrade : upgrades) {
+            BigInteger cost = upgrade.getNextCost(isCheaper);
+            if ((cheapest == null || cost.compareTo(cheapestCost) < 0) && stardustCount.compareTo(cost) >= 0) {
+                cheapest = upgrade;
+                cheapestCost = cost;
+            }
+        }
+        
+        if (cheapest != null) {
+            buyUpgrade(cheapest);
+        }
+    }
+    
+    // --- NEW: Special Events System ---
+    private void startEventSpawner() {
+        eventSpawnerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                int baseChance = 15;
+                int eventSkillLevel = getSkillLevel("event_1");
+                int actualChance = baseChance + (eventSkillLevel * 10); // +10% per level
+                
+                if (!isEventActive && random.nextInt(100) < actualChance) {
+                    triggerRandomEvent();
+                }
+                eventHandler.postDelayed(this, 60000); // Check every minute
+            }
+        };
+        eventHandler.postDelayed(eventSpawnerRunnable, 60000);
+    }
+    
+    private void triggerRandomEvent() {
+        String[] eventTypes = {"stardust_rain", "cosmic_storm", "black_hole_surge", "time_warp"};
+        currentEventType = eventTypes[random.nextInt(eventTypes.length)];
+        isEventActive = true;
+        eventEndTime = System.currentTimeMillis() + 30000; // 30 seconds
+        
+        switch (currentEventType) {
+            case "stardust_rain":
+                Toast.makeText(this, "🌟 STARDUST RAIN! Click power doubled for 30 seconds!", Toast.LENGTH_LONG).show();
+                tvEventStatus.setText("🌟 STARDUST RAIN ACTIVE");
+                break;
+            case "cosmic_storm":
+                Toast.makeText(this, "⚡ COSMIC STORM! All production tripled for 30 seconds!", Toast.LENGTH_LONG).show();
+                tvEventStatus.setText("⚡ COSMIC STORM ACTIVE");
+                break;
+            case "black_hole_surge":
+                Toast.makeText(this, "🌌 BLACK HOLE SURGE! Rift spawn rate increased!", Toast.LENGTH_LONG).show();
+                tvEventStatus.setText("🌌 BLACK HOLE SURGE ACTIVE");
+                spawnEventRifts();
+                break;
+            case "time_warp":
+                Toast.makeText(this, "⏰ TIME WARP! Shooting Star cooldown reduced to 5 seconds!", Toast.LENGTH_LONG).show();
+                tvEventStatus.setText("⏰ TIME WARP ACTIVE");
+                break;
+        }
+        
+        // Track event for statistics
+        eventsSeen.put(currentEventType, eventsSeen.getOrDefault(currentEventType, 0) + 1);
+        
+        // Show event status
+        tvEventStatus.setVisibility(View.VISIBLE);
+        tvEventStatus.setAlpha(0f);
+        tvEventStatus.animate().alpha(1f).setDuration(500).start();
+        
+        // End event after 30 seconds
+        eventHandler.postDelayed(() -> {
+            isEventActive = false;
+            currentEventType = "";
+            Toast.makeText(this, "Event ended!", Toast.LENGTH_SHORT).show();
+            
+            // Hide event status with animation
+            tvEventStatus.animate().alpha(0f).setDuration(500).withEndAction(() -> {
+                tvEventStatus.setVisibility(View.GONE);
+            }).start();
+        }, 30000);
+    }
+    
+    private void spawnEventRifts() {
+        for (int i = 0; i < 3; i++) {
+            eventHandler.postDelayed(() -> spawnRift(), i * 2000); // Spawn 3 rifts over 6 seconds
+        }
+    }
+    
+    // Update click logic to handle events
+    private BigInteger getEventModifiedClickValue(BigInteger baseValue) {
+        if (isEventActive && "stardust_rain".equals(currentEventType)) {
+            return baseValue.multiply(BigInteger.valueOf(2));
+        }
+        return baseValue;
+    }
+    
+    // Update SPS calculation to handle events
+    private long getEventModifiedSps(long baseSps) {
+        if (isEventActive && "cosmic_storm".equals(currentEventType)) {
+            return baseSps * 3;
+        }
+        return baseSps;
     }
 }

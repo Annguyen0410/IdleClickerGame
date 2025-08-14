@@ -8,10 +8,15 @@ public enum SkillType {
     MILESTONE_BOOST,       // Makes milestones more effective
     SINGULARITY_BOOST,     // Earn more Singularities per reset
 
-    // Active Ability Modifiers (we can implement these later)
+    // Active Ability Modifiers
     BOOST_DURATION,        // Increases Shooting Star duration
     BOOST_POWER,           // Increases Shooting Star power
-    RIFT_REWARD_BOOST,      // Cosmic Rifts give better rewards
-    CRITICAL_CLICK_CHANCE // NEW
+    RIFT_REWARD_BOOST,     // Cosmic Rifts give better rewards
+    CRITICAL_CLICK_CHANCE, // Chance for super-powered clicks
+    
+    // NEW: Advanced Skills
+    RESEARCH_COST_REDUCTION, // Makes research cheaper
+    GALAXY_BOOST,          // Increases Galaxy Points earned
+    EVENT_BOOST            // Increases event frequency
 
 }
