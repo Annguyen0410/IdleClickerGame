@@ -1,18 +1,410 @@
 <?xml version="1.0" encoding="utf-8"?>
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/modern_panel_background">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/statistics"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_color_primary"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textStyle="bold"
-                android:textColor="@color/text_color_primary"
+            android:layout_weight="1"
+            android:text="Total Clicks:"
+            android:textSize="14sp"
+            android:textColor="@color/text_color_primary" />
 
-            android:layout_width="match_parent"
-                android:layout_weight="1"
-            <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:textColor="@color/text_color_primary"
-        </LinearLayout>
+                 <TextView
+             android:id="@+id/tvTotalClicks"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Time Played:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvTimePlayed"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0m"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Total Stardust:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvTotalStardust"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Highest Stardust:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvHighestStardust"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Best SPS:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvBestSps"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Total Prestiges:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvTotalPrestiges"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Galaxy Collapses:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvGalaxyCollapses"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Big Crunches:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvBigCrunches"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Upgrades Purchased:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvUpgradesPurchased"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Research Purchased:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvResearchPurchased"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Clicks per Second:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvClicksPerSecond"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Stardust from Clicks:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvStardustFromClicks"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Stardust from Production:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvStardustFromProduction"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Stardust Events:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvEventsStardust"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Cosmic Events:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvEventsCosmic"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="8dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Blackhole Events:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvEventsBlackhole"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+     <LinearLayout
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:orientation="horizontal"
+         android:layout_marginBottom="16dp">
+
+         <TextView
+             android:layout_width="0dp"
+             android:layout_height="wrap_content"
+             android:layout_weight="1"
+             android:text="Time Events:"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+
+         <TextView
+             android:id="@+id/tvEventsTime"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:text="0"
+             android:textSize="14sp"
+             android:textColor="@color/text_color_primary" />
+     </LinearLayout>
+
+</LinearLayout>

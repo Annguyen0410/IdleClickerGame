@@ -27,53 +27,11 @@
         android:textColor="@color/text_color_primary"/>
 
     <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchMusic"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="48dp"
-        android:layout_marginTop="8dp"
-        android:text="Background Music"
-        android:textSize="18sp"
-        android:textColor="@color/text_color_primary"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Music Volume"
-        android:textSize="16sp"
-        android:textColor="@color/text_color_primary"
-        android:layout_marginTop="16dp"/>
-
-    <SeekBar
-        android:id="@+id/seekBarMusicVolume"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:max="100"
-        android:progress="50"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Sound Effects Volume"
-        android:textSize="16sp"
-        android:textColor="@color/text_color_primary"
-        android:layout_marginTop="16dp"/>
-
-    <SeekBar
-        android:id="@+id/seekBarSoundVolume"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:max="100"
-        android:progress="100"/>
-
-    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switchNotifications"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minHeight="48dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:text="Notifications (Coming Soon)"
         android:textColor="@color/text_color_secondary"
         android:textSize="18sp"

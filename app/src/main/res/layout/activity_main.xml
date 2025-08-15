@@ -9,6 +9,20 @@
     tools:context=".MainActivity">
 
     <!-- Top row of buttons -->
+    <TextView
+        android:id="@+id/tvEventStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text=""
+        android:textColor="@color/accent_cyan"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnAchievements"
         android:layout_width="wrap_content"
@@ -35,6 +49,21 @@
         app:tint="@color/accent_cyan"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:elevation="8dp"
+        app:borderWidth="0dp"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnStatistics"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
+        android:contentDescription="Statistics"
+        android:src="@android:drawable/ic_menu_info_details"
+        app:backgroundTint="@color/panel_background"
+        app:tint="@color/accent_gold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnSettings"
         app:elevation="8dp"
         app:borderWidth="0dp"/>
 
@@ -149,6 +178,30 @@
             android:background="@drawable/modern_button_background"
             android:alpha="0.5"/>
 
+        <Button
+            android:id="@+id/btnBuy50"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:minWidth="64dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:text="x50"
+            android:textColor="@color/white"
+            android:background="@drawable/modern_button_background"
+            android:alpha="0.5"/>
+
+        <Button
+            android:id="@+id/btnBuy100"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:minWidth="64dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:text="x100"
+            android:textColor="@color/white"
+            android:background="@drawable/modern_button_background"
+            android:alpha="0.5"/>
+
     </LinearLayout>
 
     <!-- NEW: TabLayout for switching between Upgrades and Research -->
@@ -250,6 +303,22 @@
             android:text="BIG CRUNCH"
             android:textColor="@color/app_background"
             android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:layout_marginStart="8dp"/>
+            
+        <!-- NEW: Galaxy Collapse Button -->
+        <Button
+            android:id="@+id/btnGalaxyCollapse"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:background="@drawable/modern_button_background"
+            android:backgroundTint="@color/supernova_button_color"
+            android:text="GALAXY COLLAPSE"
+            android:textColor="@color/white"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:visibility="gone"
             android:layout_marginStart="8dp"/>

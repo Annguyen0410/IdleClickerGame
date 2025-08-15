@@ -7,5 +7,6 @@ public enum AchievementType {
     REACH_SPS,              // Based on reaching a certain Stardust-per-second
     SINGULARITY_COUNT,
     RESEARCH_COUNT,
-    ESSENCE_COUNT
+    ESSENCE_COUNT,
+    GALAXY_COUNT
 }
